@@ -65,8 +65,11 @@ func verifyInput(input string) bool {
 
     if move[0] >= 97 && move[0] <= 104 {
 	fmt.Println(move + " is a pawn move")
+
+	
+
 	return true
-    }	
+    }
 
     return false
 }
