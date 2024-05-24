@@ -31,18 +31,18 @@ var whiteRook = Piece{'R', '\u2656', W, 8}
 var whiteKnight = Piece{'N', '\u2658', W, 3}
 var whiteBishop = Piece{'B', '\u2657', W, 8}
 var whitePawn = Piece{'P', '\u2659', W, 2}
-var emptySquare = Piece{'0', '0', B, 0}
+var emptySquare = Piece{'0', ' ', B, 0}
 
 func initializeBoard() [8][8]Piece {
     board := [8][8]Piece{
-	{blackRook, blackKnight, blackBishop, blackQueen, blackKing, blackBishop, blackKnight, blackRook},
-	{blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn},
-	{emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare},
-	{emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare},
-	{emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare},
-	{emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare},
-	{whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn},
-	{whiteRook, whiteKnight, whiteBishop, whiteQueen, whiteKing, whiteBishop, whiteKnight, whiteRook},
+		{blackRook, blackKnight, blackBishop, blackQueen, blackKing, blackBishop, blackKnight, blackRook},
+		{blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn},
+		{emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare},
+		{emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare},
+		{emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare},
+		{emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare, emptySquare},
+		{whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn, whitePawn},
+		{whiteRook, whiteKnight, whiteBishop, whiteQueen, whiteKing, whiteBishop, whiteKnight, whiteRook},
     }
     return board
 }
@@ -51,24 +51,31 @@ func printBoard(board [8][8]Piece) {
     fmt.Printf(W + "  a   b   c   d   e   f   g   h\n")
     fmt.Printf(Br + " -------------------------------\n")
     for i := 0; i < 8; i++ {
-    fmt.Printf(Br + "|")
-	for j := 0; j < 8; j++ {
-	    fmt.Printf(board[i][j].color+" %s"+Br+" |", string(board[i][j].icon))
-	}
-	fmt.Printf(W + " %d", 8 - i)
-    	fmt.Printf(Br + "\n -------------------------------\n")
+    	fmt.Printf(Br + "|")
+		for j := 0; j < 8; j++ {
+		    fmt.Printf(board[i][j].color+" %s"+Br+" |", string(board[i][j].icon))
+		}
+		fmt.Printf(W + " %d", 8 - i)
+   		fmt.Printf(Br + "\n -------------------------------\n")
     }
 }
 
-func verifyInput(input string) bool {
+func verifyInput(board [8][8]Piece, input string) bool {
     move := input[:len(input) - 1]
-
     if move[0] >= 97 && move[0] <= 104 {
-	fmt.Println(move + " is a pawn move")
-	return true
+		fmt.Println(move + " is a pawn move")
+		return true
     }	
 
+
     return false
+}
+
+func movePiece(board [8][8]Piece, input string) {
+	if !verifyInput(board, input) {
+		fmt.Println("This move was invalid")
+	}
+
 }
 
 func main() {
@@ -77,25 +84,21 @@ func main() {
     fmt.Println("Enter proper chess notation to make a move.")
     whiteTurn := true
     for {
-	printBoard(board)
+		printBoard(board)
 
-	if whiteTurn {
-	    fmt.Printf("White move: ")
-	} else {
-	    fmt.Printf("Black move: ")
-	}
+		if whiteTurn {
+		    fmt.Printf("White move: ")
+		} else {
+		    fmt.Printf("Black move: ")
+		}
 	
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-
-	if err != nil {
-	    fmt.Println("Failed to read user input. Aborting.")
-	}
-
-	if verifyInput(input) {
-	    whiteTurn = !whiteTurn 
-	}
-
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+	
+		if err != nil {
+	    	fmt.Println("Failed to read user input. Aborting.")
+		}	
+		movePiece(board, input)
     }
 
 }
