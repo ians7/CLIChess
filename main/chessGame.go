@@ -8,7 +8,7 @@ import (
 )
 
 type Piece struct {
-    identity int
+    ID int
     icon int
     color string
     spacesCanMove int
@@ -53,29 +53,70 @@ func printBoard(board [8][8]Piece) {
     for i := 0; i < 8; i++ {
     	fmt.Printf(Br + "|")
 		for j := 0; j < 8; j++ {
-		    fmt.Printf(board[i][j].color+" %s"+Br+" |", string(board[i][j].icon))
+		    fmt.Printf(board[i][j].color+" U+%X"+Br+" |", board[i][j].icon)
 		}
 		fmt.Printf(W + " %d", 8 - i)
    		fmt.Printf(Br + "\n -------------------------------\n")
     }
 }
 
-func verifyInput(board [8][8]Piece, input string) bool {
-    move := input[:len(input) - 1]
-    if move[0] >= 97 && move[0] <= 104 {
-		fmt.Println(move + " is a pawn move")
-		return true
-    }	
-
-
-    return false
-}
-
-func movePiece(board [8][8]Piece, input string) {
-	if !verifyInput(board, input) {
-		fmt.Println("This move was invalid")
+func parseLocationToMove(input string) (x byte, y byte) {
+	location := input
+	if input[0] >= 97 && input[0] <= 104 {
+		location = input[0:]
 	}
 
+	return location[0] - 97, location[1] - 49
+}
+
+func movePiece(input string, whiteTurn bool, board [8][8]Piece) [8][8]Piece {
+	var pieceType byte 
+	if input[0] >= 97 && input[0] <= 104 {
+		pieceType = 'P'
+	} else if input[0] == 'N' || input[0] == 'K' || input[0] == 'Q' || input[0] == 'B' || input[0] == 'R' {
+		pieceType = input[0]
+	} else {
+		fmt.Println("Please input valid chess notation")
+		return board
+	}
+	fmt.Println("Piece Type", pieceType)
+
+	xCor, yCor := parseLocationToMove(input)
+
+	if whiteTurn {
+		for i := 0; i < 8; i++ {
+			for j := 0; j < 8; j++ {
+				if board[i][j].color == W && byte(board[i][j].ID) == pieceType {
+					
+					if pieceType == 'P' {
+						if yCor - byte(board[i][j].spacesCanMove) >= 0 {
+							fmt.Printf("Pawn Move\n")
+							board[xCor][yCor] = board[i][j]
+							board[i][j] = emptySquare
+							return board
+						}
+					}
+					if pieceType == 'K' {
+
+					}
+					if pieceType == 'Q' {
+
+					}
+					if pieceType == 'R' {
+
+					}
+					if pieceType == 'N' {
+
+					}
+					if pieceType == 'B' {
+
+					}
+				}
+			}
+		}
+	}
+
+	return board
 }
 
 func main() {
@@ -94,11 +135,11 @@ func main() {
 	
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
-	
 		if err != nil {
 	    	fmt.Println("Failed to read user input. Aborting.")
 		}	
-		movePiece(board, input)
+		board = movePiece(input, whiteTurn, board)
+		whiteTurn = !whiteTurn
     }
 
 }
