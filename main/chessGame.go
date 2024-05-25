@@ -64,6 +64,27 @@ func parseLocationToMove(input string) (x byte, y byte) {
 	location := input
 	if input[0] >= 97 && input[0] <= 104 {
 		location = input[0:]
+	]
+
+}
+
+func verifyInput(board [8][8]Piece, input string) bool {
+    move := input[:len(input) - 1]
+    if move[0] >= 97 && move[0] <= 104 {
+	fmt.Println(move + " is a pawn move")
+	return true
+    }
+		fmt.Println(move + " is a pawn move")
+		return true
+    }	
+
+
+    return false
+}
+
+func movePiece(board [8][8]Piece, input string) {
+	if !verifyInput(board, input) {
+		fmt.Println("This move was invalid")
 	}
 
 	return location[0] - 97, location[1] - 49

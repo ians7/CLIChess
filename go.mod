@@ -1,3 +1,3 @@
-module src/chessGame.go
+module src/chessGame.go 
 
 go 1.22.3
