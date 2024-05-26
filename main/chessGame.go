@@ -4,14 +4,15 @@ import (
     "fmt"
     "os"
     "bufio"
-//    "strings"
+	"os/exec"
+	"strings"
 )
 
 type Piece struct {
     ID int
     icon int
     color string
-    spacesCanMove int
+    spacesCanMove int16
 }
 
 var G = "\u001b[38;5;243m"
@@ -20,16 +21,16 @@ var B = "\u001b[38;5;232m"
 var Br = "\u001b[38;5;94m"
 
 var blackKing = Piece{'K', '\u2654', G, 1}
-var blackQueen = Piece{'Q', '\u2655', G, 8}
-var blackRook = Piece{'R', '\u2656', G, 8}
+var blackQueen = Piece{'Q', '\u2655', G, 7}
+var blackRook = Piece{'R', '\u2656', G, 7}
 var blackKnight = Piece{'N', '\u2658', G, 3}
-var blackBishop = Piece{'B', '\u2657', G, 8}
+var blackBishop = Piece{'B', '\u2657', G, 7}
 var blackPawn = Piece{'P', '\u2659', G, 2}
 var whiteKing = Piece{'K', '\u2654', W, 1}
-var whiteQueen = Piece{'Q', '\u2658', W, 8}
-var whiteRook = Piece{'R', '\u2656', W, 8}
+var whiteQueen = Piece{'Q', '\u2658', W, 7}
+var whiteRook = Piece{'R', '\u2656', W, 7}
 var whiteKnight = Piece{'N', '\u2658', W, 3}
-var whiteBishop = Piece{'B', '\u2657', W, 8}
+var whiteBishop = Piece{'B', '\u2657', W, 7}
 var whitePawn = Piece{'P', '\u2659', W, 2}
 var emptySquare = Piece{'0', ' ', B, 0}
 
@@ -53,96 +54,104 @@ func printBoard(board [8][8]Piece) {
     for i := 0; i < 8; i++ {
     	fmt.Printf(Br + "|")
 		for j := 0; j < 8; j++ {
-		    fmt.Printf(board[i][j].color+" U+%X"+Br+" |", board[i][j].icon)
+		    fmt.Printf(board[i][j].color+" %c"+Br+" |", board[i][j].icon)
 		}
 		fmt.Printf(W + " %d", 8 - i)
    		fmt.Printf(Br + "\n -------------------------------\n")
     }
 }
 
-func parseLocationToMove(input string) (x byte, y byte) {
-	location := input
-	if input[0] >= 97 && input[0] <= 104 {
-		location = input[0:]
-	]
-
-}
-
-func verifyInput(board [8][8]Piece, input string) bool {
-    move := input[:len(input) - 1]
-    if move[0] >= 97 && move[0] <= 104 {
-	fmt.Println(move + " is a pawn move")
-	return true
-    }
-		fmt.Println(move + " is a pawn move")
-		return true
-    }	
-
-
-    return false
-}
-
-func movePiece(board [8][8]Piece, input string) {
-	if !verifyInput(board, input) {
-		fmt.Println("This move was invalid")
-	}
-
-	return location[0] - 97, location[1] - 49
-}
-
-func movePiece(input string, whiteTurn bool, board [8][8]Piece) [8][8]Piece {
+func movePiece(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, bool) {
 	var pieceType byte 
+	capture := false
+	if strings.Contains(input, "x") {
+		capture = true
+	}
+	var capturingPieceFile int16 = 0
 	if input[0] >= 97 && input[0] <= 104 {
+		if capture {
+			capturingPieceFile = int16(input[0] - '0' - 48)
+		}
 		pieceType = 'P'
 	} else if input[0] == 'N' || input[0] == 'K' || input[0] == 'Q' || input[0] == 'B' || input[0] == 'R' {
 		pieceType = input[0]
 	} else {
 		fmt.Println("Please input valid chess notation")
-		return board
+		return board, false;
 	}
-	fmt.Println("Piece Type", pieceType)
 
-	xCor, yCor := parseLocationToMove(input)
-
+	row := int16(8 - (input[len(input) - 2] - '0'))
+	file := int16((input[len(input) - 3] - '0') - 49)
+	fmt.Println(file, row)
+	color := "" 
 	if whiteTurn {
-		for i := 0; i < 8; i++ {
-			for j := 0; j < 8; j++ {
-				if board[i][j].color == W && byte(board[i][j].ID) == pieceType {
-					
-					if pieceType == 'P' {
-						if yCor - byte(board[i][j].spacesCanMove) >= 0 {
-							fmt.Printf("Pawn Move\n")
-							board[xCor][yCor] = board[i][j]
+		color = W
+	} else {
+		color = G
+	}
+
+	for i := int16(0) ; i < 8; i++ {
+		for j := int16(0) ; j < 8; j++ {
+			if board[i][j].color == color && int16(board[i][j].ID) == int16(pieceType) {
+				if pieceType == 'P' {
+					if whiteTurn {
+						if capture && j == capturingPieceFile { 
+							if ((file == j + 1 && row == i - 1) || (file == j - 1 && row == i - 1)) && board[row][file].color == G {
+								fmt.Println(j, capturingPieceFile)
+								board[row][file] = board[i][j]
+								board[i][j] = emptySquare
+								return board, true
+							} else {
+								return board, false
+							}
+						} 
+						if i - row <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
+							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
-							return board
+							board[row][file].spacesCanMove = 1
+							return board, true
+						}
+					} else {
+						if capture {
+							if (file == j + 1 && row == i + 1) || (file == j - 1 && row == i + 1) && board[row][file].color == W {
+								board[row][file] = board[i][j]
+								board[i][j] = emptySquare
+								return board, true
+							} else {
+								return board, false
+							}
+						} 
+						if row - i <= board[i][j].spacesCanMove && file == j {
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							board[row][file].spacesCanMove = 1
+							return board, true
 						}
 					}
-					if pieceType == 'K' {
+				}	
+				if pieceType == 'K' {
 
-					}
-					if pieceType == 'Q' {
+				}
+				if pieceType == 'Q' {
 
-					}
-					if pieceType == 'R' {
+				}
+				if pieceType == 'R' {
 
-					}
-					if pieceType == 'N' {
+				}
+				if pieceType == 'N' {
 
-					}
-					if pieceType == 'B' {
+				}
+				if pieceType == 'B' {
 
-					}
 				}
 			}
 		}
 	}
-
-	return board
+	return board, false
 }
 
 func main() {
-    board := initializeBoard()
-
+	board := initializeBoard()
     fmt.Println("Enter proper chess notation to make a move.")
     whiteTurn := true
     for {
@@ -159,8 +168,12 @@ func main() {
 		if err != nil {
 	    	fmt.Println("Failed to read user input. Aborting.")
 		}	
-		board = movePiece(input, whiteTurn, board)
-		whiteTurn = !whiteTurn
+		success := false
+		board, success = movePiece(input, whiteTurn, board)
+		if success {
+			whiteTurn = !whiteTurn
+		}
+		exec.Command("clear")
     }
 
 }
