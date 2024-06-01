@@ -102,7 +102,7 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 							return board, false
 						}
 					}
-					if i - row <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
+					if i - row > 0 && i - row <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
 						board[i][j].canBeEnPassant = false
 						if i-row == 2 {
 							board[i][j].canBeEnPassant = true
@@ -113,6 +113,21 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 						return board, true
 					}
 				}
+			if pieceType == 'K' {
+
+			}
+			if pieceType == 'Q' {
+
+			}
+			if pieceType == 'R' {
+
+			}
+			if pieceType == 'N' {
+
+			}
+			if pieceType == 'B' {
+
+			}
 			}
 		}
 	}
@@ -138,7 +153,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 							return board, false
 						}
 					}
-					if row-i <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
+					if row - i > 0 && row-i <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
 						board[i][j].canBeEnPassant = false
 						if row-i == 2 {
 							board[i][j].canBeEnPassant = true
@@ -149,7 +164,6 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 						return board, true
 					}
 				}
-			}
 			if pieceType == 'K' {
 
 			}
@@ -164,6 +178,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 			}
 			if pieceType == 'B' {
 
+			}
 			}
 		}
 	}
