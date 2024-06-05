@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 )
@@ -26,7 +27,7 @@ var blackKnight = Piece{'N', '\u2658', G, 3, false}
 var blackBishop = Piece{'B', '\u2657', G, 7, false}
 var blackPawn = Piece{'P', '\u2659', G, 2, false}
 var whiteKing = Piece{'K', '\u2654', W, 1, false}
-var whiteQueen = Piece{'Q', '\u2658', W, 7, false}
+var whiteQueen = Piece{'Q', '\u2655', W, 7, false}
 var whiteRook = Piece{'R', '\u2656', W, 7, false}
 var whiteKnight = Piece{'N', '\u2658', W, 3, false}
 var whiteBishop = Piece{'B', '\u2657', W, 7, false}
@@ -62,7 +63,8 @@ func printBoard(board [8][8]Piece) {
 }
 
 func parseInput(input string, pieceType *int, capture *bool, capturingPieceFile *int) bool {
-	if match, err := regexp.MatchString(`([a-hNKQBR])?([a-h1-8])x[a-h][1-8]\n`, input); err == nil && match {
+	if match, err := regexp.MatchString(`^([a-hNKQBR])?([a-h1-8])x[a-h][1-8]\n$`, input); err == nil && match {
+		fmt.Println("Condition 1 is true")
 		*capture = true
 		*capturingPieceFile = int(input[2] - '0' - 49)
 		if input[0] >= 97 && input[0] <= 104 {
@@ -72,9 +74,13 @@ func parseInput(input string, pieceType *int, capture *bool, capturingPieceFile 
 			*pieceType = int(input[0])
 		}
 		return true
-	} else if match, err := regexp.MatchString(`[a-h][1-8]\n`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]`, input); err == nil && match {
+		fmt.Println("Condition 2 is true")
+		*pieceType = int(input[0])
+		return true
+	} else if match, err := regexp.MatchString(`^[a-h][1-8]\n$`, input); err == nil && match {
+		fmt.Println("Condition 3 is true")
 		*pieceType = 'P'
-		*capture = false
 		return true
 	} else {
 		fmt.Println("Please input valid chess notation", input)
@@ -83,7 +89,37 @@ func parseInput(input string, pieceType *int, capture *bool, capturingPieceFile 
 	}
 }
 
+func checkPieceInWay(board [8][8]Piece, pieceRow int16, pieceFile int16, destRow int16, destFile int16) bool {
+	rowIterator := 1
+	fileIterator := 1
+	if pieceRow > destRow {
+		rowIterator = -1
+	} else if pieceRow == destRow {
+		rowIterator = 0
+	}
+	if pieceFile > destFile {
+		fileIterator = -1
+	} else if pieceFile == destFile {
+		fileIterator = 0
+	}
+
+	fmt.Println("rowIterator =", rowIterator, "fileIterator =", fileIterator)
+	fmt.Println("row =", pieceRow, "file =", pieceFile)
+	fmt.Println("destRow =", destRow, "destFile =", destFile)
+	k, l := pieceRow, pieceFile
+	for !(k == destRow && l == destFile)  {
+		if board[k][l].ID != '0' && board[k][l] != board[pieceRow][pieceFile] {
+			fmt.Println("There is a piece in the way")
+			return true
+		}
+		k += int16(rowIterator)
+		l += int16(fileIterator)
+	}
+	return false
+}
+
 func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int) ([8][8]Piece, bool) {
+
 	for i := int16(0); i < 8; i++ {
 		for j := int16(0); j < 8; j++ {
 			if board[i][j].color == W && int16(board[i][j].ID) == int16(pieceType) {
@@ -102,7 +138,7 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 							return board, false
 						}
 					}
-					if i - row > 0 && i - row <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
+					if i-row > 0 && i-row <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
 						board[i][j].canBeEnPassant = false
 						if i-row == 2 {
 							board[i][j].canBeEnPassant = true
@@ -113,21 +149,31 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 						return board, true
 					}
 				}
-			if pieceType == 'K' {
+				if pieceType == 'K' {
+				}
+				if pieceType == 'Q' {
+						
+					if checkPieceInWay(board, i, j, row, file) == true {
+						return board, false
+					}
 
-			}
-			if pieceType == 'Q' {
+					if math.Abs(float64(row-i)) == math.Abs(float64(j-file)) || file-j == 0 || row-i == 0 {
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					} else {
+						return board, false
+					}
+				}
+				if pieceType == 'R' {
 
-			}
-			if pieceType == 'R' {
+				}
+				if pieceType == 'N' {
 
-			}
-			if pieceType == 'N' {
+				}
+				if pieceType == 'B' {
 
-			}
-			if pieceType == 'B' {
-
-			}
+				}
 			}
 		}
 	}
@@ -153,7 +199,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 							return board, false
 						}
 					}
-					if row - i > 0 && row-i <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
+					if row-i > 0 && row-i <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
 						board[i][j].canBeEnPassant = false
 						if row-i == 2 {
 							board[i][j].canBeEnPassant = true
@@ -164,25 +210,36 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 						return board, true
 					}
 				}
-			if pieceType == 'K' {
+				if pieceType == 'K' {
 
-			}
-			if pieceType == 'Q' {
+				}
+				if pieceType == 'Q' {
+						
+					if checkPieceInWay(board, i, j, row, file) == true {
+						return board, false
+					}
 
-			}
-			if pieceType == 'R' {
+					if math.Abs(float64(row-i)) == math.Abs(float64(j-file)) || file-j == 0 || row-i == 0 {
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					} else {
+						return board, false
+					}
+				}
+				if pieceType == 'R' {
 
-			}
-			if pieceType == 'N' {
+				}
+				if pieceType == 'N' {
 
-			}
-			if pieceType == 'B' {
+				}
+				if pieceType == 'B' {
 
-			}
+				}
 			}
 		}
 	}
-	return board, false;
+	return board, false
 }
 
 func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, bool) {
@@ -194,6 +251,10 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 	}
 	row := int16(8 - (input[len(input)-2] - '0'))
 	file := int16((input[len(input)-3] - '0') - 49)
+
+	if board[row][file].ID != '0' {
+		return board, false
+	}
 
 	if whiteTurn {
 		board, success := whiteMovement(board, row, file, capture, capturingPieceFile, pieceType)
@@ -229,7 +290,7 @@ func main() {
 		if success {
 			whiteTurn = !whiteTurn
 		} else {
-			fmt.Println("Please input valid chess notation.")
+			fmt.Println("Please input a valid move.")
 		}
 	}
 
