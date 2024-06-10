@@ -9,30 +9,34 @@ import (
 )
 
 type Piece struct {
-	ID             int
+	pieceID        int
 	icon           int
 	color          string
 	spacesCanMove  int16
 	canBeEnPassant bool
+	teamID         int
 }
 
 var G = "\u001b[38;5;243m"
 var W = "\u001b[38;5;15m"
 var B = "\u001b[38;5;232m"
-var Br = "\u001b[38;5;94m"
-var blackKing = Piece{'K', '\u2654', G, 1, false}
-var blackQueen = Piece{'Q', '\u2655', G, 7, false}
-var blackRook = Piece{'R', '\u2656', G, 7, false}
-var blackKnight = Piece{'N', '\u2658', G, 3, false}
-var blackBishop = Piece{'B', '\u2657', G, 7, false}
-var blackPawn = Piece{'P', '\u2659', G, 2, false}
-var whiteKing = Piece{'K', '\u2654', W, 1, false}
-var whiteQueen = Piece{'Q', '\u2655', W, 7, false}
-var whiteRook = Piece{'R', '\u2656', W, 7, false}
-var whiteKnight = Piece{'N', '\u2658', W, 3, false}
-var whiteBishop = Piece{'B', '\u2657', W, 7, false}
-var whitePawn = Piece{'P', '\u2659', W, 2, false}
-var emptySquare = Piece{'0', ' ', B, 0, false}
+var bgRed = "\u001b[;45m"
+var bgCyan = "\u001b[;46m"
+var bgBlack = "\u001b[;40m"
+var Br = "\u001b[38;5;94;m"
+var blackKing = Piece{'K', '\u2654', B, 1, false, 1}
+var blackQueen = Piece{'Q', '\u2655', B, 7, false, 1}
+var blackRook = Piece{'R', '\u2656', B, 7, false, 1}
+var blackKnight = Piece{'N', '\u2658', B, 3, false, 1}
+var blackBishop = Piece{'B', '\u2657', B, 7, false, 1}
+var blackPawn = Piece{'P', '\u2659', B, 2, false, 1}
+var whiteKing = Piece{'K', '\u2654', W, 1, false, 0}
+var whiteQueen = Piece{'Q', '\u2655', W, 7, false, 0}
+var whiteRook = Piece{'R', '\u2656', W, 7, false, 0}
+var whiteKnight = Piece{'N', '\u2658', W, 3, false, 0}
+var whiteBishop = Piece{'B', '\u2657', W, 7, false, 0}
+var whitePawn = Piece{'P', '\u2659', W, 2, false, 0}
+var emptySquare = Piece{'0', ' ', B, 0, false, 0}
 
 func initializeBoard() [8][8]Piece {
 
@@ -52,19 +56,27 @@ func initializeBoard() [8][8]Piece {
 func printBoard(board [8][8]Piece) {
 	fmt.Printf(W + "  a   b   c   d   e   f   g   h\n")
 	fmt.Printf(Br + " -------------------------------\n")
+	bgColor := bgRed
+	colorBool := true
 	for i := 0; i < 8; i++ {
 		fmt.Printf(Br + "|")
 		for j := 0; j < 8; j++ {
-			fmt.Printf(board[i][j].color+" %c"+Br+" |", board[i][j].icon)
+			if colorBool {
+				bgColor = bgRed
+			} else {
+				bgColor = bgCyan
+			}
+			fmt.Printf(bgColor+board[i][j].color+" %c "+Br+bgBlack+"|", board[i][j].icon)
+			colorBool = !colorBool
 		}
 		fmt.Printf(W+" %d", 8-i)
-		fmt.Printf(Br + "\n -------------------------------\n")
+		fmt.Printf(Br + "\n -------------------------------\n" + W)
+		colorBool = !colorBool
 	}
 }
 
 func parseInput(input string, pieceType *int, capture *bool, capturingPieceFile *int) bool {
 	if match, err := regexp.MatchString(`^([a-hNKQBR])?([a-h1-8])x[a-h][1-8]\n$`, input); err == nil && match {
-		fmt.Println("Condition 1 is true")
 		*capture = true
 		*capturingPieceFile = int(input[2] - '0' - 49)
 		if input[0] >= 97 && input[0] <= 104 {
@@ -75,11 +87,9 @@ func parseInput(input string, pieceType *int, capture *bool, capturingPieceFile 
 		}
 		return true
 	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]`, input); err == nil && match {
-		fmt.Println("Condition 2 is true")
 		*pieceType = int(input[0])
 		return true
 	} else if match, err := regexp.MatchString(`^[a-h][1-8]\n$`, input); err == nil && match {
-		fmt.Println("Condition 3 is true")
 		*pieceType = 'P'
 		return true
 	} else {
@@ -107,8 +117,8 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int16, pieceFile int16, destRow
 	fmt.Println("row =", pieceRow, "file =", pieceFile)
 	fmt.Println("destRow =", destRow, "destFile =", destFile)
 	k, l := pieceRow, pieceFile
-	for !(k == destRow && l == destFile)  {
-		if board[k][l].ID != '0' && board[k][l] != board[pieceRow][pieceFile] {
+	for !(k == destRow && l == destFile) {
+		if board[k][l].pieceID != '0' && board[k][l] != board[pieceRow][pieceFile] {
 			fmt.Println("There is a piece in the way")
 			return true
 		}
@@ -119,28 +129,27 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int16, pieceFile int16, destRow
 }
 
 func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int) ([8][8]Piece, bool) {
-
+	
 	for i := int16(0); i < 8; i++ {
 		for j := int16(0); j < 8; j++ {
-			if board[i][j].color == W && int16(board[i][j].ID) == int16(pieceType) {
+			if board[i][j].teamID == 0 && int16(board[i][j].pieceID) == int16(pieceType) {
 				if pieceType == 'P' {
 					if capture && j == int16(capturingPieceFile) {
-						if ((file == j+1 || file == j-1) && row == i-1) && board[row][file].color == G {
+						if ((file == j+1 || file == j-1) && row == i-1) && board[row][file].pieceID == 'P' {
+							fmt.Println("normal capture conditions are true")
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							return board, true
-						} else if ((file == j+1 || file == j-1) && row == i) && board[row][file].color == G && board[file][row].canBeEnPassant {
+						} else if ((file == j+1 || file == j-1) && row == i) && board[row][file].pieceID == 'P' && board[row][file].canBeEnPassant {
+							fmt.Println("en passant conditions are true")
 							board[row-1][file] = board[i][j]
 							board[i][j] = emptySquare
 							board[row][file] = emptySquare
 							return board, true
-						} else {
-							return board, false
-						}
-					}
-					if i-row > 0 && i-row <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
+						}					}
+					if i-row > 0 && i-row <= board[i][j].spacesCanMove && file == j && board[row][file].pieceID == '0' && capturingPieceFile == 0 {
 						board[i][j].canBeEnPassant = false
-						if i-row == 2 {
+						if math.Abs(float64(i-row)) == 2 {
 							board[i][j].canBeEnPassant = true
 						}
 						board[row][file] = board[i][j]
@@ -152,7 +161,7 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 				if pieceType == 'K' {
 				}
 				if pieceType == 'Q' {
-						
+
 					if checkPieceInWay(board, i, j, row, file) == true {
 						return board, false
 					}
@@ -161,18 +170,32 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 						board[row][file] = board[i][j]
 						board[i][j] = emptySquare
 						return board, true
-					} else {
-						return board, false
-					}
+					} 
 				}
 				if pieceType == 'R' {
 
 				}
 				if pieceType == 'N' {
 
+					if (math.Abs(float64(row-i)) == 2 && math.Abs(float64(file-j)) == 1) || (math.Abs(float64(row-i)) == 1 && math.Abs(float64(file-j)) == 2) { 
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					} 				
 				}
 				if pieceType == 'B' {
 
+					if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
+						if checkPieceInWay(board, i, j, row, file) == true {
+							return board, false
+						}
+
+						if math.Abs(float64(row-i)) == math.Abs(float64(j-file)) {
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							return board, true
+						}
+					}
 				}
 			}
 		}
@@ -183,25 +206,24 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int) ([8][8]Piece, bool) {
 	for i := int16(0); i < 8; i++ {
 		for j := int16(0); j < 8; j++ {
-			if board[i][j].color == G && int16(board[i][j].ID) == int16(pieceType) {
+			if board[i][j].teamID == 1 && int16(board[i][j].pieceID) == int16(pieceType) {
 				if pieceType == 'P' {
 					if capture && j == int16(capturingPieceFile) {
-						if ((file == j+1 || file == j-1) && row == i+1) && board[row][file].color == W {
+						if ((file == j+1 || file == j-1) && row == i+1) && board[row][file].pieceID == 'P' {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							return board, true
-						} else if ((file == j+1 || file == j-1) && row == i) && board[row][file].color == W && board[file][row].canBeEnPassant {
+						} else if ((file == j+1 || file == j-1) && row == i) && board[row][file].pieceID == 'P' && board[row][file].canBeEnPassant {
 							board[row+1][file] = board[i][j]
 							board[i][j] = emptySquare
 							board[row][file] = emptySquare
 							return board, true
-						} else {
-							return board, false
 						}
 					}
-					if row-i > 0 && row-i <= board[i][j].spacesCanMove && file == j && board[row][file].color == B && capturingPieceFile == 0 {
+					if row-i > 0 && row-i <= board[i][j].spacesCanMove && file == j && board[row][file].pieceID == '0' && capturingPieceFile == 0 {
 						board[i][j].canBeEnPassant = false
-						if row-i == 2 {
+						fmt.Println("canBeEnPassant ->", math.Abs(float64(row - i)))
+						if math.Abs(float64(row - i)) == 2 {
 							board[i][j].canBeEnPassant = true
 						}
 						board[row][file] = board[i][j]
@@ -214,7 +236,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 
 				}
 				if pieceType == 'Q' {
-						
+
 					if checkPieceInWay(board, i, j, row, file) == true {
 						return board, false
 					}
@@ -223,8 +245,6 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 						board[row][file] = board[i][j]
 						board[i][j] = emptySquare
 						return board, true
-					} else {
-						return board, false
 					}
 				}
 				if pieceType == 'R' {
@@ -232,9 +252,25 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 				}
 				if pieceType == 'N' {
 
+					if (math.Abs(float64(row-i)) == 2 && math.Abs(float64(file-j)) == 1) || (math.Abs(float64(row-i)) == 1 && math.Abs(float64(file-j)) == 2) { 
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					} 				
 				}
 				if pieceType == 'B' {
 
+					if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
+						if checkPieceInWay(board, i, j, row, file) == true {
+							return board, false
+						}
+
+						if math.Abs(float64(row-i)) == math.Abs(float64(j-file)) {
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							return board, true
+						} 
+					}
 				}
 			}
 		}
@@ -252,7 +288,11 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 	row := int16(8 - (input[len(input)-2] - '0'))
 	file := int16((input[len(input)-3] - '0') - 49)
 
-	if board[row][file].ID != '0' {
+	if row > 8 || row < 0 || file > 8 || file < 0 {
+		return board, false
+	}
+
+	if capture == false && board[row][file].pieceID != '0' {
 		return board, false
 	}
 
@@ -293,5 +333,6 @@ func main() {
 			fmt.Println("Please input a valid move.")
 		}
 	}
+
 
 }
