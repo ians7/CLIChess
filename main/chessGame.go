@@ -138,32 +138,30 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int16, pieceFile int16, destRow
 	return false
 }
 
-func detectCheckOnKing(board [8][8]Piece) (bool, Piece) {
+func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 	kingCount := 0
-	whiteKing := board[0][0]
 	whiteKingRow := 0
 	whiteKingFile := 0
-	blackKing := board[0][0]
 	blackKingRow := 0
 	blackKingFile := 0
-	for i := 0; i < 8; i++ {
+	wkInCheck := false
+	bkInCheck := false
+	for i := 0 ; i < 8 ; i++ {
 		for j := 0; j < 8; j++ {
 			if board[i][j].pieceID == 'K' {
 				if board[i][j].teamID == 1 {
-					blackKing = board[i][j]
 					blackKingRow = i
 					blackKingFile = j
 				}
 				if board[i][j].teamID == 0 {
-					whiteKing = board[i][j]
 					whiteKingRow = i
 					whiteKingFile = j
 				}
 				kingCount++
 			}
-		}
-		if kingCount == 2 {
-			break
+			if kingCount == 2 {
+				 break;
+			}
 		}
 	}
 
@@ -176,66 +174,64 @@ func detectCheckOnKing(board [8][8]Piece) (bool, Piece) {
 			bkRowDist := math.Abs(float64(blackKingRow - i))
 			if currPiece.pieceID == 'P' {
 				if currPiece.teamID == 1 && (wkFileDist == wkRowDist && wkFileDist == 1 && wkRowDist == 1) {
-					fmt.Println("King in in check by a pawn")
-					return true, whiteKing
+					fmt.Println("White king in in check by a pawn")
+					wkInCheck = true
 				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist && bkFileDist == 1 && bkRowDist == 1) {
-					fmt.Println("King in in check by a pawn")
-					return true, blackKing
+					fmt.Println("Black king in in check by a pawn")
+					bkInCheck = true
 				}
 			} else if currPiece.pieceID == 'Q' {
 				if currPiece.teamID == 1 && (wkFileDist == wkRowDist || wkFileDist == 0 || wkRowDist == 0) {
 					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
-						return false, emptySquare
+						wkInCheck = false
+					} else {
+						fmt.Println("White king in in check by a queen")
+						wkInCheck = true
 					}
-					fmt.Println("King in in check by a queen")
-					return true, whiteKing
 				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist || bkFileDist == 0 || bkRowDist == 0) {
 					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
-						return false, emptySquare
+						bkInCheck = false
+					} else {
+						fmt.Println("Black king in in check by a queen")
+						bkInCheck = true
 					}
-					fmt.Println("King in in check by a queen")
-					return true, blackKing
 				}
 			} else if currPiece.pieceID == 'R' {
 				if currPiece.teamID == 1 && (wkFileDist == 0 || wkRowDist == 0) {
 					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
-						return false, emptySquare
+						wkInCheck = false
+					} else {
+						fmt.Println("White king in in check by a rook")
+						wkInCheck = true
 					}
-					fmt.Println("King in in check by a rook")
-					return true, whiteKing
 				} else if currPiece.teamID == 0 && (bkFileDist == 0 || bkRowDist == 0) {
 					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
-						return false, emptySquare
+						bkInCheck = false
+					} else {
+						fmt.Println("Black king in in check by a rook")
+						bkInCheck = true
 					}
-					fmt.Println("King in in check by a rook")
-					return true, blackKing
 				}
 			} else if currPiece.pieceID == 'N' {
 				if currPiece.teamID == 1 && ((wkRowDist == 2 && wkFileDist == 1) || (wkRowDist == 1 && wkFileDist == 2)) {
-					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
-						return false, emptySquare
-					}
-					fmt.Println("King in in check by a knight")
-					return true, whiteKing
+					fmt.Println("White king in in check by a knight")
+					wkInCheck = true
 				} else if currPiece.teamID == 0 && ((bkRowDist == 2 && bkFileDist == 1) || (bkRowDist == 1 && bkFileDist == 2)) {
-					fmt.Println("King in in check by a knight")
-					return true, blackKing
+					fmt.Println("Black king in in check by a knight")
+					bkInCheck = true
 				}
 			} else if currPiece.pieceID == 'B' {
 				if currPiece.teamID == 1 && (wkFileDist == wkRowDist) {
-					fmt.Println("King in in check by a bishop")
-					return true, whiteKing
+					fmt.Println("White king in in check by a bishop")
+					wkInCheck = true
 				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist) {
-					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
-						return false, emptySquare
-					}
-					fmt.Println("King in in check by a bishop")
-					return true, blackKing
+					fmt.Println("Black king in in check by a bishop")
+					bkInCheck = true
 				}
 			}
 		}
 	}
-	return false, emptySquare
+	return wkInCheck, bkInCheck
 }
 func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int) ([8][8]Piece, bool) {
 
@@ -412,6 +408,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 }
 
 func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, bool) {
+	prevBoard := board
 	pieceType := 0
 	capture := false
 	capturingPieceFile := 0
@@ -429,33 +426,27 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		return board, false
 	}
 
-	if inCheck, kingInCheck := detectCheckOnKing(board); inCheck {
-		if kingInCheck.teamID == 0 && whiteTurn {
-			fmt.Println("white king is in check")
-			return board, false
-		} else if kingInCheck.teamID == 1 && !whiteTurn {
-			fmt.Println("black king is in check")
-			return board, false
-		}
-	}
-
 	if whiteTurn {
 		board, success := whiteMovement(board, row, file, capture, capturingPieceFile, pieceType)
-		if inCheck, kingInCheck := detectCheckOnKing(board); inCheck {
-			if kingInCheck.teamID == 0 {
+		if wkInCheck, bkInCheck := detectCheckOnKing(board); wkInCheck || bkInCheck {
+			if wkInCheck {
 				fmt.Println("white king is in check")
-			} else if kingInCheck.teamID == 1 {
+				return prevBoard, false
+			} else if bkInCheck {
 				fmt.Println("black king is in check")
+				return board, success
 			}
 		}
 		return board, success
 	} else {
 		board, success := blackMovement(board, row, file, capture, capturingPieceFile, pieceType)
-		if inCheck, kingInCheck := detectCheckOnKing(board); inCheck {
-			if kingInCheck.teamID == 0 {
-				fmt.Println("white king is in check")
-			} else if kingInCheck.teamID == 1 {
+		if wkInCheck, bkInCheck := detectCheckOnKing(board); wkInCheck || bkInCheck {
+			if bkInCheck {
 				fmt.Println("black king is in check")
+				return prevBoard, false
+			} else if wkInCheck {
+				fmt.Println("white king is in check")
+				return board, success
 			}
 		}
 		return board, success
