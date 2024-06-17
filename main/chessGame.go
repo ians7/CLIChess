@@ -275,8 +275,8 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 				rowDisamb = true
 				fileDisamb = true
 			}
-			if rowDisamb && fileDisamb && i != int16(input[2]-'0') {
-				fmt.Println("i =", i, "disambiguated row =", input[2]-'0')
+			if rowDisamb && fileDisamb && i != int16(8-(input[2]-'0')) {
+				fmt.Println("i =", i, "disambiguated row =", 8-(input[2]-'0'))
 				break
 			}
 			rowDist := math.Abs(float64(row - i))
