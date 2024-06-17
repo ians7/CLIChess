@@ -488,4 +488,3 @@ func main() {
 	}
 
 }
-package main
