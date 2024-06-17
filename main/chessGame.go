@@ -96,7 +96,7 @@ func parseInput(input string, pieceType *int, capture *bool, capturingPieceFile 
 			*pieceType = int(input[0])
 		}
 		return true
-	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]\n$`, input); err == nil && match {
 		*pieceType = int(input[0])
 		return true
 	} else if match, err := regexp.MatchString(`^[a-h][1-8]\n$`, input); err == nil && match {
@@ -141,9 +141,10 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int16, pieceFile int16, destRow
 	}
 
 	k, l := pieceRow, pieceFile
+	k += int16(rowIterator)
+	l += int16(fileIterator)
 	for !(k == destRow && l == destFile) && k < 8 && l < 8 {
-		if board[k][l].pieceID != '0' && board[k][l] != board[pieceRow][pieceFile] {
-			fmt.Println("There is a piece in the way")
+		if board[k][l].pieceID != '0' {
 			return true
 		}
 		k += int16(rowIterator)
@@ -187,38 +188,39 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 			bkFileDist := math.Abs(float64(blackKingFile - j))
 			bkRowDist := math.Abs(float64(blackKingRow - i))
 			if currPiece.pieceID == 'P' {
-				if currPiece.teamID == 1 && (wkFileDist == wkRowDist && wkFileDist == 1 && wkRowDist == 1) {
-					fmt.Println("White king in in check by a pawn")
+				if currPiece.teamID == 1 && (wkFileDist == wkRowDist && wkFileDist == 1 && wkRowDist == 1) && !wkInCheck {
+					fmt.Println("White king is in check by a pawn")
 					wkInCheck = true
-				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist && bkFileDist == 1 && bkRowDist == 1) {
-					fmt.Println("Black king in in check by a pawn")
+				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist && bkFileDist == 1 && bkRowDist == 1) && !bkInCheck {
+					fmt.Println("Black king is in check by a pawn")
 					bkInCheck = true
 				}
 			} else if currPiece.pieceID == 'Q' {
-				if currPiece.teamID == 1 && (wkFileDist == wkRowDist || wkFileDist == 0 || wkRowDist == 0) {
+				if currPiece.teamID == 1 && (wkFileDist == wkRowDist || wkFileDist == 0 || wkRowDist == 0) && !wkInCheck {
 					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
 						wkInCheck = false
 					} else {
-						fmt.Println("White king in in check by a queen")
+						fmt.Println("White king is in check by a queen")
 						wkInCheck = true
 					}
-				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist || bkFileDist == 0 || bkRowDist == 0) {
-					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
+				} else if currPiece.teamID == 0 && (math.Abs(bkFileDist) == math.Abs(bkRowDist) || bkFileDist == 0 || bkRowDist == 0) && !bkInCheck {
+					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) && !bkInCheck {
+						fmt.Println("Black king is NOT in check by a queen")
 						bkInCheck = false
 					} else {
-						fmt.Println("Black king in in check by a queen")
+						fmt.Println("Black king is in check by a queen")
 						bkInCheck = true
 					}
 				}
 			} else if currPiece.pieceID == 'R' {
-				if currPiece.teamID == 1 && (wkFileDist == 0 || wkRowDist == 0) {
+				if currPiece.teamID == 1 && (wkFileDist == 0 || wkRowDist == 0) && !wkInCheck {
 					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
 						wkInCheck = false
 					} else {
-						fmt.Println("White king in in check by a rook")
+						fmt.Println("White king is in check by a rook")
 						wkInCheck = true
 					}
-				} else if currPiece.teamID == 0 && (bkFileDist == 0 || bkRowDist == 0) {
+				} else if currPiece.teamID == 0 && (bkFileDist == 0 || bkRowDist == 0) && !bkInCheck {
 					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
 						bkInCheck = false
 					} else {
@@ -226,24 +228,33 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 					}
 				}
 			} else if currPiece.pieceID == 'N' {
-				if currPiece.teamID == 1 && ((wkRowDist == 2 && wkFileDist == 1) || (wkRowDist == 1 && wkFileDist == 2)) {
-					fmt.Println("White king in in check by a knight")
+				if currPiece.teamID == 1 && ((wkRowDist == 2 && wkFileDist == 1) || (wkRowDist == 1 && wkFileDist == 2)) && !wkInCheck {
+					fmt.Println("White king is in check by a knight")
 					wkInCheck = true
-				} else if currPiece.teamID == 0 && ((bkRowDist == 2 && bkFileDist == 1) || (bkRowDist == 1 && bkFileDist == 2)) {
-					fmt.Println("Black king in in check by a knight")
+				} else if currPiece.teamID == 0 && ((bkRowDist == 2 && bkFileDist == 1) || (bkRowDist == 1 && bkFileDist == 2)) && !bkInCheck {
+					fmt.Println("Black king is in check by a knight")
 					bkInCheck = true
 				}
 			} else if currPiece.pieceID == 'B' {
-				if currPiece.teamID == 1 && (wkFileDist == wkRowDist) {
-					fmt.Println("White king in in check by a bishop")
-					wkInCheck = true
-				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist) {
-					fmt.Println("Black king in in check by a bishop")
-					bkInCheck = true
+				if currPiece.teamID == 1 && (wkFileDist == wkRowDist) && !wkInCheck {
+					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
+						wkInCheck = false
+					} else {
+						fmt.Println("White king is in check by a bishop")
+						wkInCheck = true
+					}
+				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist) && !bkInCheck {
+					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
+						bkInCheck = false
+					} else {
+						fmt.Println("Black king is in check by a bishop")
+						bkInCheck = true
+					}
 				}
 			}
 		}
 	}
+	fmt.Println(wkInCheck, bkInCheck)
 	return wkInCheck, bkInCheck
 }
 func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int, input string) ([8][8]Piece, bool) {
@@ -254,15 +265,19 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 		for j := int16(0); j < 8; j++ {
 			fileDisamb := false
 			rowDisamb := false
+
 			// Checking for disambiguation
 			if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
 				rowDisamb = true
 			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]x?[a-h][1-8]\n$`, input); err == nil && match {
 				fileDisamb = true
 			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
-				if board[input[1]-'a'][input[2]-'0'].pieceID != pieceType {
-					break
-				}
+				rowDisamb = true
+				fileDisamb = true
+			}
+			if rowDisamb && fileDisamb && i != int16(input[2]-'0') {
+				fmt.Println("i =", i, "disambiguated row =", input[2]-'0')
+				break
 			}
 			rowDist := math.Abs(float64(row - i))
 			fileDist := math.Abs(float64(file - j))
@@ -329,20 +344,18 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 				} else if pieceType == 'Q' {
 
 					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
-						if checkPieceInWay(board, i, j, row, file) == true {
-							return board, false
-						}
-
 						if rowDist == fileDist || file-j == 0 || row-i == 0 {
+							if checkPieceInWay(board, i, j, row, file) == true {
+								return board, false
+							}
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							return board, true
 						}
 					}
-
 				} else if pieceType == 'R' {
 
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
+					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (fileDisamb == rowDisamb) {
 						if file-j == 0 || row-i == 0 {
 							if checkPieceInWay(board, i, j, row, file) == true {
 								return board, false
@@ -353,7 +366,7 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 						}
 					}
 				} else if pieceType == 'N' {
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
+					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (fileDisamb == rowDisamb) {
 						if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
@@ -362,7 +375,7 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 					}
 				} else if pieceType == 'B' {
 
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
+					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (fileDisamb == rowDisamb) {
 						if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
 							if checkPieceInWay(board, i, j, row, file) == true {
 								return board, false
@@ -384,13 +397,13 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 
 func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int, input string) ([8][8]Piece, bool) {
 	if capture && board[row][file].teamID == 1 {
-		fmt.Println("trying to capture piece on same team")
 		return board, false
 	}
 	for i := int16(0); i < 8; i++ {
 		for j := int16(0); j < 8; j++ {
 			fileDisamb := false
 			rowDisamb := false
+
 			// Checking for disambiguation
 			if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
 				rowDisamb = true
@@ -463,19 +476,19 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 					}
 				} else if pieceType == 'Q' {
 
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
-						if checkPieceInWay(board, i, j, row, file) == true {
-							return board, false
-						}
-
+					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (fileDisamb == rowDisamb) {
 						if rowDist == fileDist || file-j == 0 || row-i == 0 {
+							if checkPieceInWay(board, i, j, row, file) == true {
+								return board, false
+							}
+
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							return board, true
 						}
 					}
 				} else if pieceType == 'R' {
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
+					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (fileDisamb == rowDisamb) {
 						if file-j == 0 || row-i == 0 {
 							if checkPieceInWay(board, i, j, row, file) == true {
 								return board, false
@@ -487,7 +500,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 					}
 				} else if pieceType == 'N' {
 
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
+					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (fileDisamb == rowDisamb) {
 						if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
@@ -496,7 +509,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 					}
 				} else if pieceType == 'B' {
 
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
+					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (fileDisamb == rowDisamb) {
 						if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
 							if checkPieceInWay(board, i, j, row, file) == true {
 								return board, false
@@ -509,7 +522,6 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 							}
 						}
 					}
-
 				}
 			}
 		}
