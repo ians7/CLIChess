@@ -40,6 +40,35 @@ var (
 	emptySquare = Piece{'0', ' ', B, 0, false, 0}
 )
 
+func main() {
+	board := initializeBoard()
+	fmt.Println("Enter proper chess notation to make a move.")
+	whiteTurn := true
+	for {
+		printBoard(board)
+
+		if whiteTurn {
+			fmt.Printf("White move: ")
+		} else {
+			fmt.Printf("Black move: ")
+		}
+
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Failed to read user input. Aborting.")
+		}
+		success := false
+		board, success = executeTurn(input, whiteTurn, board)
+		if success {
+			whiteTurn = !whiteTurn
+		} else {
+			fmt.Println("Please input a valid move.")
+		}
+	}
+
+}
+
 func initializeBoard() [8][8]Piece {
 
 	board := [8][8]Piece{
@@ -75,6 +104,59 @@ func printBoard(board [8][8]Piece) {
 		fmt.Printf(Br + "\n -------------------------------\n" + W)
 		colorBool = !colorBool
 	}
+}
+
+func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, bool) {
+	prevBoard := board
+	pieceType := 0
+	capture := false
+	capturingPieceFile := 0
+	if !parseInput(input, &pieceType, &capture, &capturingPieceFile) {
+		return board, false
+	}
+	row := int16(8 - (input[len(input)-2] - '0'))
+	file := int16(input[len(input)-3] - 'a')
+
+	if row > 8 || row < 0 || file > 8 || file < 0 {
+		return board, false
+	}
+
+	if capture == false && board[row][file].pieceID != '0' {
+		return board, false
+	}
+
+	if whiteTurn {
+		tempBoard, success := whiteMovement(board, row, file, capture, capturingPieceFile, pieceType, input)
+		if wkInCheck, bkInCheck, isMate := detectCheckOnKing(tempBoard); wkInCheck || bkInCheck {
+			if wkInCheck {
+				fmt.Println("white king is in check")
+				return prevBoard, false
+			} else if bkInCheck {
+				fmt.Println("black king is in check")
+				if isMate {
+					fmt.Println("White wins!")
+				}
+			}
+		}
+		return tempBoard, success
+	} else {
+		tempBoard, success := blackMovement(board, row, file, capture, capturingPieceFile, pieceType, input)
+		fmt.Println(success)
+		if wkInCheck, bkInCheck, isMate := detectCheckOnKing(tempBoard); wkInCheck || bkInCheck {
+			if bkInCheck {
+				fmt.Println("black king is in check")
+				return prevBoard, false
+			} else if wkInCheck {
+				fmt.Println("white king is in check")
+				if isMate {
+					fmt.Println("Black wins!")
+				}
+			}
+		}
+		return tempBoard, success
+	}
+
+	return board, false
 }
 
 func parseInput(input string, pieceType *int, capture *bool, capturingPieceFile *int) bool {
@@ -143,7 +225,7 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int16, pieceFile int16, destRow
 	k, l := pieceRow, pieceFile
 	k += int16(rowIterator)
 	l += int16(fileIterator)
-	for !(k == destRow && l == destFile) && k < 8 && l < 8 {
+	for !(k == destRow && l == destFile) && k > 0 && l > 0 && k < 8 && l < 8 {
 		if board[k][l].pieceID != '0' {
 			return true
 		}
@@ -153,24 +235,58 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int16, pieceFile int16, destRow
 	return false
 }
 
-func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
+func detectMate(kingRow int, kingFile int, board [8][8]Piece) bool {
+	fmt.Println(kingRow, kingFile)
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 8; j++ {
+			if board[kingRow][kingFile] == board[i][j] {
+				for k := kingRow + 1; k > kingRow-2; k-- {
+					if i-k > 0 && i-k < 7 {
+						tempBoard, success := whiteMovement(board, int16(i-k), int16(j), false, -1, 'K', "")
+						tempBoard[i][j] = emptySquare // Have to do this because i can't compile otherwise. Completely useless line.
+						if success {
+							return false
+						}
+					}
+				}
+
+			} 
+			if board[kingRow][kingFile] == board[i][j] {
+				for k := kingRow - 1; k < kingRow+2; k++ {
+					if i-k > 0 && i-k < 7 {
+						tempBoard, success := blackMovement(board, int16(i-k), int16(j), false, -1, 'K', "")
+						tempBoard[i][j] = emptySquare // Have to do this because i can't compile otherwise. Completely useless line.
+						if success {
+							return false
+						}
+					}
+				}
+			}
+
+		}
+	}
+	return true
+}
+
+func detectCheckOnKing(board [8][8]Piece) (bool, bool, bool) {
 	kingCount := 0
-	whiteKingRow := 0
-	whiteKingFile := 0
-	blackKingRow := 0
-	blackKingFile := 0
+	wkRow := 0
+	wkFile := 0
+	bkRow := 0
+	bkFile := 0
 	wkInCheck := false
 	bkInCheck := false
+	isMate := false
 	for i := 0; i < 8; i++ {
 		for j := 0; j < 8; j++ {
 			if board[i][j].pieceID == 'K' {
 				if board[i][j].teamID == 1 {
-					blackKingRow = i
-					blackKingFile = j
+					bkRow = i
+					bkFile = j
 				}
 				if board[i][j].teamID == 0 {
-					whiteKingRow = i
-					whiteKingFile = j
+					wkRow = i
+					wkFile = j
 				}
 				kingCount++
 			}
@@ -183,28 +299,29 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 	for i := 0; i < 8; i++ {
 		for j := 0; j < 8; j++ {
 			currPiece := board[i][j]
-			wkFileDist := math.Abs(float64(whiteKingFile - j))
-			wkRowDist := math.Abs(float64(whiteKingRow - i))
-			bkFileDist := math.Abs(float64(blackKingFile - j))
-			bkRowDist := math.Abs(float64(blackKingRow - i))
+			wkFileDist := math.Abs(float64(wkFile - j))
+			wkRowDist := math.Abs(float64(wkRow - i))
+			bkFileDist := math.Abs(float64(bkFile - j))
+			bkRowDist := math.Abs(float64(bkRow - i))
 			if currPiece.pieceID == 'P' {
 				if currPiece.teamID == 1 && (wkFileDist == wkRowDist && wkFileDist == 1 && wkRowDist == 1) && !wkInCheck {
 					fmt.Println("White king is in check by a pawn")
 					wkInCheck = true
-				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist && bkFileDist == 1 && bkRowDist == 1) && !bkInCheck {
+				} else if currPiece.teamID == 0 && (bkFileDist == 1 && bkRowDist == 1) && !bkInCheck {
 					fmt.Println("Black king is in check by a pawn")
+					fmt.Println(i, j)
 					bkInCheck = true
 				}
 			} else if currPiece.pieceID == 'Q' {
-				if currPiece.teamID == 1 && (wkFileDist == wkRowDist || wkFileDist == 0 || wkRowDist == 0) && !wkInCheck {
-					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
+				if currPiece.teamID == 1 && (math.Abs(wkFileDist) == math.Abs(wkRowDist) || wkFileDist == 0 || wkRowDist == 0) && !wkInCheck {
+					if checkPieceInWay(board, int16(i), int16(j), int16(wkRow), int16(wkFile)) {
 						wkInCheck = false
 					} else {
 						fmt.Println("White king is in check by a queen")
 						wkInCheck = true
 					}
 				} else if currPiece.teamID == 0 && (math.Abs(bkFileDist) == math.Abs(bkRowDist) || bkFileDist == 0 || bkRowDist == 0) && !bkInCheck {
-					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) && !bkInCheck {
+					if checkPieceInWay(board, int16(i), int16(j), int16(bkRow), int16(bkFile)) {
 						fmt.Println("Black king is NOT in check by a queen")
 						bkInCheck = false
 					} else {
@@ -214,14 +331,14 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 				}
 			} else if currPiece.pieceID == 'R' {
 				if currPiece.teamID == 1 && (wkFileDist == 0 || wkRowDist == 0) && !wkInCheck {
-					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
+					if checkPieceInWay(board, int16(i), int16(j), int16(wkRow), int16(wkFile)) {
 						wkInCheck = false
 					} else {
 						fmt.Println("White king is in check by a rook")
 						wkInCheck = true
 					}
 				} else if currPiece.teamID == 0 && (bkFileDist == 0 || bkRowDist == 0) && !bkInCheck {
-					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
+					if checkPieceInWay(board, int16(i), int16(j), int16(bkFile), int16(bkFile)) {
 						bkInCheck = false
 					} else {
 						bkInCheck = true
@@ -237,14 +354,14 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 				}
 			} else if currPiece.pieceID == 'B' {
 				if currPiece.teamID == 1 && (wkFileDist == wkRowDist) && !wkInCheck {
-					if checkPieceInWay(board, int16(i), int16(j), int16(whiteKingRow), int16(whiteKingFile)) {
+					if checkPieceInWay(board, int16(i), int16(j), int16(wkRow), int16(wkFile)) {
 						wkInCheck = false
 					} else {
 						fmt.Println("White king is in check by a bishop")
 						wkInCheck = true
 					}
 				} else if currPiece.teamID == 0 && (bkFileDist == bkRowDist) && !bkInCheck {
-					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
+					if checkPieceInWay(board, int16(i), int16(j), int16(bkFile), int16(bkFile)) {
 						bkInCheck = false
 					} else {
 						fmt.Println("Black king is in check by a bishop")
@@ -254,9 +371,17 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 			}
 		}
 	}
-	fmt.Println(wkInCheck, bkInCheck)
-	return wkInCheck, bkInCheck
+	if wkInCheck && detectMate(wkRow, wkFile, board) {
+		fmt.Println("Game over!")
+		isMate = true
+	} else if bkInCheck && detectMate(bkRow, bkFile, board) {
+		fmt.Println("Game over!")
+		isMate = true
+	}
+	fmt.Println(wkInCheck, bkInCheck, isMate)
+	return wkInCheck, bkInCheck, isMate
 }
+
 func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int, input string) ([8][8]Piece, bool) {
 	if capture && board[row][file].teamID == 0 {
 		return board, false
@@ -276,7 +401,6 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 				fileDisamb = true
 			}
 			if rowDisamb && fileDisamb && i != int16(8-(input[2]-'0')) {
-				fmt.Println("i =", i, "disambiguated row =", 8-(input[2]-'0'))
 				break
 			}
 			rowDist := math.Abs(float64(row - i))
@@ -316,7 +440,6 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 						board[i][j] = emptySquare
 						board[row][file].spacesCanMove = 1
 						if row == 0 {
-							fmt.Println("Row is equal to 0")
 							promoteTo := pawnPromote()
 							if promoteTo == "Q\n" {
 								board[row][file] = whiteQueen
@@ -462,6 +585,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 								board[row][file] = blackRook
 							}
 						}
+						fmt.Println("succesfully moved pawn")
 						return board, true
 					}
 				} else if pieceType == 'K' {
@@ -527,81 +651,4 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 		}
 	}
 	return board, false
-}
-
-func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, bool) {
-	prevBoard := board
-	pieceType := 0
-	capture := false
-	capturingPieceFile := 0
-	if !parseInput(input, &pieceType, &capture, &capturingPieceFile) {
-		return board, false
-	}
-	row := int16(8 - (input[len(input)-2] - '0'))
-	file := int16(input[len(input)-3] - 'a')
-
-	if row > 8 || row < 0 || file > 8 || file < 0 {
-		return board, false
-	}
-
-	if capture == false && board[row][file].pieceID != '0' {
-		return board, false
-	}
-
-	if whiteTurn {
-		board, success := whiteMovement(board, row, file, capture, capturingPieceFile, pieceType, input)
-		if wkInCheck, bkInCheck := detectCheckOnKing(board); wkInCheck || bkInCheck {
-			if wkInCheck {
-				fmt.Println("white king is in check")
-				return prevBoard, false
-			} else if bkInCheck {
-				fmt.Println("black king is in check")
-				return board, success
-			}
-		}
-		return board, success
-	} else {
-		board, success := blackMovement(board, row, file, capture, capturingPieceFile, pieceType, input)
-		if wkInCheck, bkInCheck := detectCheckOnKing(board); wkInCheck || bkInCheck {
-			if bkInCheck {
-				fmt.Println("black king is in check")
-				return prevBoard, false
-			} else if wkInCheck {
-				fmt.Println("white king is in check")
-				return board, success
-			}
-		}
-		return board, success
-	}
-
-	return board, false
-}
-
-func main() {
-	board := initializeBoard()
-	fmt.Println("Enter proper chess notation to make a move.")
-	whiteTurn := true
-	for {
-		printBoard(board)
-
-		if whiteTurn {
-			fmt.Printf("White move: ")
-		} else {
-			fmt.Printf("Black move: ")
-		}
-
-		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Failed to read user input. Aborting.")
-		}
-		success := false
-		board, success = executeTurn(input, whiteTurn, board)
-		if success {
-			whiteTurn = !whiteTurn
-		} else {
-			fmt.Println("Please input a valid move.")
-		}
-	}
-
 }
