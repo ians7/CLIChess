@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"strings"
 )
 
 type Piece struct {
@@ -18,25 +19,25 @@ type Piece struct {
 }
 
 var (
-	G           = "\u001b[38;5;243m"
-	W           = "\u001b[38;5;15m"
-	B           = "\u001b[38;5;232m"
-	bgRed       = "\u001b[;45m"
-	bgCyan      = "\u001b[;46m"
-	bgBlack     = "\u001b[;40m"
-	Br          = "\u001b[38;5;94;m"
-	blackKing   = Piece{'K', '\u2654', B, 1, false, 1}
-	blackQueen  = Piece{'Q', '\u2655', B, 7, false, 1}
-	blackRook   = Piece{'R', '\u2656', B, 7, false, 1}
+	G = "\u001b[38;5;243m"
+	W = "\u001b[38;5;15m"
+	B = "\u001b[38;5;232m"
+	bgRed = "\u001b[;45m"
+	bgCyan = "\u001b[;46m"
+	bgBlack = "\u001b[;40m"
+	Br = "\u001b[38;5;94;m"
+	blackKing = Piece{'K', '\u2654', B, 1, false, 1}
+	blackQueen = Piece{'Q', '\u2655', B, 7, false, 1}
+	blackRook = Piece{'R', '\u2656', B, 7, false, 1}
 	blackKnight = Piece{'N', '\u2658', B, 3, false, 1}
 	blackBishop = Piece{'B', '\u2657', B, 7, false, 1}
-	blackPawn   = Piece{'P', '\u2659', B, 2, false, 1}
-	whiteKing   = Piece{'K', '\u2654', W, 1, false, 0}
-	whiteQueen  = Piece{'Q', '\u2655', W, 7, false, 0}
-	whiteRook   = Piece{'R', '\u2656', W, 7, false, 0}
+	blackPawn = Piece{'P', '\u2659', B, 2, false, 1}
+	whiteKing = Piece{'K', '\u2654', W, 1, false, 0}
+	whiteQueen = Piece{'Q', '\u2655', W, 7, false, 0}
+	whiteRook = Piece{'R', '\u2656', W, 7, false, 0}
 	whiteKnight = Piece{'N', '\u2658', W, 3, false, 0}
 	whiteBishop = Piece{'B', '\u2657', W, 7, false, 0}
-	whitePawn   = Piece{'P', '\u2659', W, 2, false, 0}
+	whitePawn = Piece{'P', '\u2659', W, 2, false, 0}
 	emptySquare = Piece{'0', ' ', B, 0, false, 0}
 )
 
@@ -80,18 +81,10 @@ func printBoard(board [8][8]Piece) {
 func parseInput(input string, pieceType *int, capture *bool, capturingPieceFile *int) bool {
 	if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?x[a-h][1-8]\n$`, input); err == nil && match {
 		*capture = true
-		*capturingPieceFile = int(input[2] - 'a')
+		*capturingPieceFile = int(input[2] - '0' - 49)
 		if input[0] >= 97 && input[0] <= 104 {
 			*pieceType = 'P'
-			*capturingPieceFile = int(input[0] - 'a')
-		} else {
-			*pieceType = int(input[0])
-		}
-		return true
-	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?[a-h][1-8]\n$`, input); err == nil && match {
-		if input[0] >= 97 && input[0] <= 104 {
-			*pieceType = 'P'
-			*capturingPieceFile = int(input[0] - 'a')
+			*capturingPieceFile = int(input[0] - '0' - 49)
 		} else {
 			*pieceType = int(input[0])
 		}
@@ -246,27 +239,30 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 	}
 	return wkInCheck, bkInCheck
 }
-func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int, input string) ([8][8]Piece, bool) {
+func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int) ([8][8]Piece, bool) {
 	if capture && board[row][file].teamID == 0 {
 		return board, false
 	}
 	for i := int16(0); i < 8; i++ {
 		for j := int16(0); j < 8; j++ {
-			fileDisamb := false
-			rowDisamb := false
-			// Checking for disambiguation
 			if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
-				rowDisamb = true
-			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]x?[a-h][1-8]\n$`, input); err == nil && match {
-				fileDisamb = true
-			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
-				if board[input[1]-'a'][input[2]-'0'].pieceID != pieceType {
-					break
+				if (board[8 - input[len(input)-3] - '0')][j].pieceID != pieceType) {
+					break;
+				}
+			}
+			if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]x?[a-h][1-8]\n$`, input); err == nil && match {
+				if (board[i][input[len(input)-3] - '0') - 49].pieceID != pieceType) {
+					break;
+				}
+			}
+			if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
+				if (board[8 - input[len(input)-3] - '0')][input[len(input)-3] - '0') - 49].pieceID != pieceType) {
+					break;
 				}
 			}
 			rowDist := math.Abs(float64(row - i))
 			fileDist := math.Abs(float64(file - j))
-			if board[i][j].teamID == 0 && board[i][j].pieceID == pieceType {
+			if board[i][j].teamID == 0 && int16(board[i][j].pieceID) == int16(pieceType) {
 				if pieceType == 'P' {
 					if capture && j == int16(capturingPieceFile) {
 						if ((file == j+1 || file == j-1) && row == i-1) && board[row][file].teamID == 1 {
@@ -327,52 +323,43 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 					}
 
 				} else if pieceType == 'Q' {
+					if checkPieceInWay(board, i, j, row, file) == true {
+						return board, false
+					}
 
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
+					if rowDist == fileDist || file-j == 0 || row-i == 0 {
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					}
+				} else if pieceType == 'R' {
+
+					if file-j == 0 || row-i == 0 {
+						if checkPieceInWay(board, i, j, row, file) == true {
+							return board, false
+						}
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					}
+				} else if pieceType == 'N' {
+
+					if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					}
+				} else if pieceType == 'B' {
+
+					if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
 						if checkPieceInWay(board, i, j, row, file) == true {
 							return board, false
 						}
 
-						if rowDist == fileDist || file-j == 0 || row-i == 0 {
+						if rowDist == fileDist {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							return board, true
-						}
-					}
-
-				} else if pieceType == 'R' {
-
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
-						if file-j == 0 || row-i == 0 {
-							if checkPieceInWay(board, i, j, row, file) == true {
-								return board, false
-							}
-							board[row][file] = board[i][j]
-							board[i][j] = emptySquare
-							return board, true
-						}
-					}
-				} else if pieceType == 'N' {
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
-						if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
-							board[row][file] = board[i][j]
-							board[i][j] = emptySquare
-							return board, true
-						}
-					}
-				} else if pieceType == 'B' {
-
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
-						if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
-							if checkPieceInWay(board, i, j, row, file) == true {
-								return board, false
-							}
-
-							if rowDist == fileDist {
-								board[row][file] = board[i][j]
-								board[i][j] = emptySquare
-								return board, true
-							}
 						}
 					}
 				}
@@ -382,25 +369,13 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 	return board, false
 }
 
-func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int, input string) ([8][8]Piece, bool) {
+func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int) ([8][8]Piece, bool) {
 	if capture && board[row][file].teamID == 1 {
 		fmt.Println("trying to capture piece on same team")
 		return board, false
 	}
 	for i := int16(0); i < 8; i++ {
 		for j := int16(0); j < 8; j++ {
-			fileDisamb := false
-			rowDisamb := false
-			// Checking for disambiguation
-			if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
-				rowDisamb = true
-			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]x?[a-h][1-8]\n$`, input); err == nil && match {
-				fileDisamb = true
-			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
-				if board[input[1]-'a'][input[2]-'0'].pieceID != pieceType {
-					break
-				}
-			}
 			rowDist := math.Abs(float64(row - i))
 			fileDist := math.Abs(float64(file - j))
 			if board[i][j].teamID == 1 && int16(board[i][j].pieceID) == int16(pieceType) {
@@ -463,53 +438,44 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 					}
 				} else if pieceType == 'Q' {
 
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
+					if checkPieceInWay(board, i, j, row, file) == true {
+						return board, false
+					}
+
+					if rowDist == fileDist || file-j == 0 || row-i == 0 {
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					}
+				} else if pieceType == 'R' {
+					if file-j == 0 || row-i == 0 {
+						if checkPieceInWay(board, i, j, row, file) == true {
+							return board, false
+						}
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					}
+				} else if pieceType == 'N' {
+
+					if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						return board, true
+					}
+				} else if pieceType == 'B' {
+
+					if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
 						if checkPieceInWay(board, i, j, row, file) == true {
 							return board, false
 						}
 
-						if rowDist == fileDist || file-j == 0 || row-i == 0 {
+						if rowDist == fileDist {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							return board, true
 						}
 					}
-				} else if pieceType == 'R' {
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
-						if file-j == 0 || row-i == 0 {
-							if checkPieceInWay(board, i, j, row, file) == true {
-								return board, false
-							}
-							board[row][file] = board[i][j]
-							board[i][j] = emptySquare
-							return board, true
-						}
-					}
-				} else if pieceType == 'N' {
-
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
-						if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
-							board[row][file] = board[i][j]
-							board[i][j] = emptySquare
-							return board, true
-						}
-					}
-				} else if pieceType == 'B' {
-
-					if (rowDisamb && i == int16(input[1]-'0')) || (fileDisamb && j == int16(input[1]-'a')) || (!fileDisamb && !rowDisamb) {
-						if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
-							if checkPieceInWay(board, i, j, row, file) == true {
-								return board, false
-							}
-
-							if rowDist == fileDist {
-								board[row][file] = board[i][j]
-								board[i][j] = emptySquare
-								return board, true
-							}
-						}
-					}
-
 				}
 			}
 		}
@@ -526,7 +492,7 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		return board, false
 	}
 	row := int16(8 - (input[len(input)-2] - '0'))
-	file := int16(input[len(input)-3] - 'a')
+	file := int16((input[len(input)-3] - '0') - 49)
 
 	if row > 8 || row < 0 || file > 8 || file < 0 {
 		return board, false
@@ -537,7 +503,7 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 	}
 
 	if whiteTurn {
-		board, success := whiteMovement(board, row, file, capture, capturingPieceFile, pieceType, input)
+		board, success := whiteMovement(board, row, file, capture, capturingPieceFile, pieceType)
 		if wkInCheck, bkInCheck := detectCheckOnKing(board); wkInCheck || bkInCheck {
 			if wkInCheck {
 				fmt.Println("white king is in check")
@@ -549,7 +515,7 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		}
 		return board, success
 	} else {
-		board, success := blackMovement(board, row, file, capture, capturingPieceFile, pieceType, input)
+		board, success := blackMovement(board, row, file, capture, capturingPieceFile, pieceType)
 		if wkInCheck, bkInCheck := detectCheckOnKing(board); wkInCheck || bkInCheck {
 			if bkInCheck {
 				fmt.Println("black king is in check")
