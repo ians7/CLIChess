@@ -127,7 +127,7 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int16, pieceFile int16, destRow
 	}
 
 	k, l := pieceRow, pieceFile
-	for !(k == destRow && l == destFile) {
+	for !(k == destRow && l == destFile) && k < 8 && l < 8 {
 		if board[k][l].pieceID != '0' && board[k][l] != board[pieceRow][pieceFile] {
 			fmt.Println("There is a piece in the way")
 			return true
@@ -208,7 +208,6 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 					if checkPieceInWay(board, int16(i), int16(j), int16(blackKingRow), int16(blackKingFile)) {
 						bkInCheck = false
 					} else {
-						fmt.Println("Black king in in check by a rook")
 						bkInCheck = true
 					}
 				}
@@ -234,7 +233,9 @@ func detectCheckOnKing(board [8][8]Piece) (bool, bool) {
 	return wkInCheck, bkInCheck
 }
 func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int) ([8][8]Piece, bool) {
-
+	if capture && board[row][file].teamID == 0 {
+		return board, false
+	}
 	for i := int16(0); i < 8; i++ {
 		for j := int16(0); j < 8; j++ {
 			rowDist := math.Abs(float64(row-i))
@@ -242,7 +243,7 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 			if board[i][j].teamID == 0 && int16(board[i][j].pieceID) == int16(pieceType) {
 				if pieceType == 'P' {
 					if capture && j == int16(capturingPieceFile) {
-						if ((file == j+1 || file == j-1) && row == i-1) && board[row][file].pieceID == 'P' {
+						if ((file == j+1 || file == j-1) && row == i-1) && board[row][file].teamID == 1 {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							return board, true
@@ -322,6 +323,10 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 }
 
 func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, capturingPieceFile int, pieceType int) ([8][8]Piece, bool) {
+	if capture && board[row][file].teamID == 1 {
+		fmt.Println("trying to capture piece on same team")
+		return board, false
+	}
 	for i := int16(0); i < 8; i++ {
 		for j := int16(0); j < 8; j++ {
 			rowDist := math.Abs(float64(row-i))
@@ -329,7 +334,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, capture bool, captu
 			if board[i][j].teamID == 1 && int16(board[i][j].pieceID) == int16(pieceType) {
 				if pieceType == 'P' {
 					if capture && j == int16(capturingPieceFile) {
-						if ((file == j+1 || file == j-1) && row == i+1) && board[row][file].pieceID == 'P' {
+						if ((file == j+1 || file == j-1) && row == i+1) && board[row][file].teamID == 0 {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							return board, true
@@ -483,3 +488,4 @@ func main() {
 	}
 
 }
+package main
