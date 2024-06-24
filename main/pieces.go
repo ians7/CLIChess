@@ -1,5 +1,13 @@
 package main
 
+import (
+	"fmt"
+	"bufio"
+	"os"
+	"math"
+	"regexp"
+)
+
 type Piece struct {
 	pieceID        int
 	icon           int
@@ -37,4 +45,440 @@ func pawnPromote() string {
 			fmt.Println("Improper input.")
 		}
 	}
+}
+
+func getSpacesCanMove(pieceRow int16, pieceFile int16, board [8][8]Piece) []Square {
+	var spacesCanMove []Square
+	currPiece := board[pieceRow][pieceFile]
+	switch currPiece.pieceID {
+	case 'P':
+		if currPiece.teamID == 0 {
+			if !checkPieceInWay(board, pieceRow, pieceFile, pieceRow-2, pieceFile) && pieceRow == 1 {
+				spacesCanMove = append(spacesCanMove, Square{pieceRow - 2, pieceFile})
+				spacesCanMove = append(spacesCanMove, Square{pieceRow - 1, pieceFile})
+			} else if !checkPieceInWay(board, pieceRow, pieceFile, pieceRow-1, pieceFile) {
+				spacesCanMove = append(spacesCanMove, Square{pieceRow - 1, pieceFile})
+			}
+		} else {
+			if !checkPieceInWay(board, pieceRow, pieceFile, pieceRow+2, pieceFile) && pieceRow == 6 {
+				spacesCanMove = append(spacesCanMove, Square{pieceRow + 2, pieceFile})
+				spacesCanMove = append(spacesCanMove, Square{pieceRow + 1, pieceFile})
+			} else if !checkPieceInWay(board, pieceRow, pieceFile, pieceRow+1, pieceFile) {
+				spacesCanMove = append(spacesCanMove, Square{pieceRow + 1, pieceFile})
+			}
+		}
+
+	case 'Q':
+		for i := int16(0); i < 8; i++ {
+			for j := int16(0); j < 8; j++ {
+				fileDist := math.Abs(float64(pieceFile - j))
+				rowDist := math.Abs(float64(pieceRow - i))
+				if (fileDist == rowDist || fileDist == 0 || rowDist == 0) && !checkPieceInWay(board, pieceRow, pieceFile, i, j) {
+					spacesCanMove = append(spacesCanMove, Square{i, j})
+				}
+			}
+		}
+
+	case 'R':
+		for i := int16(0); i < 8; i++ {
+			for j := int16(0); j < 8; j++ {
+				fileDist := math.Abs(float64(pieceFile - j))
+				rowDist := math.Abs(float64(pieceRow - i))
+				if (fileDist == 0 || rowDist == 0) && !checkPieceInWay(board, pieceRow, pieceFile, i, j) {
+					spacesCanMove = append(spacesCanMove, Square{i, j})
+				}
+			}
+		}
+
+	case 'N':
+		for i := int16(0); i < 8; i++ {
+			for j := int16(0); j < 8; j++ {
+				fileDist := math.Abs(float64(pieceFile - j))
+				rowDist := math.Abs(float64(pieceRow - i))
+				if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
+					spacesCanMove = append(spacesCanMove, Square{i, j})
+				}
+			}
+		}
+
+	case 'B':
+		for i := int16(0); i < 8; i++ {
+			for j := int16(0); j < 8; j++ {
+				fileDist := math.Abs(float64(pieceFile - j))
+				rowDist := math.Abs(float64(pieceRow - i))
+				if (fileDist == rowDist) && !checkPieceInWay(board, pieceRow, pieceFile, i, j) {
+					spacesCanMove = append(spacesCanMove, Square{i, j})
+				}
+			}
+		}
+
+	case 'K':
+		for i := int16(0); i < 8; i++ {
+			for j := int16(0); j < 8; j++ {
+				if currPiece.teamID == 0 {
+					board, success, isMate := whiteMovement(board, i, j, 'K', "")
+					if isMate {
+						fmt.Println("failure")
+					}
+					board[0][0] = emptySquare // do not remove
+					if success {
+						spacesCanMove = append(spacesCanMove, Square{i, j})
+					}
+				} else {
+					board, success, isMate := blackMovement(board, i, j, 'K', "")
+					if isMate {
+						fmt.Println("failure")
+					}
+					board[0][0] = emptySquare // do not remove
+					if success {
+						spacesCanMove = append(spacesCanMove, Square{i, j})
+					}
+				}
+			}
+		}
+	}
+	return spacesCanMove
+}
+
+func whiteMovement(board [8][8]Piece, row int16, file int16, pieceType int, input string) ([8][8]Piece, bool, bool) {
+	prevBoard := board
+	success := false
+	if board[row][file].teamID == 0 {
+		return board, false, false
+	}
+	for i := int16(0); i < 8; i++ {
+		for j := int16(0); j < 8; j++ {
+			fileDisamb := false
+			rowDisamb := false
+			disambRow := -1
+			disambFile := -1
+
+			// Checking for disambiguation
+			if match, err := regexp.MatchString(`^[a-h]x[a-h][1-8]\n$`, input); err == nil && match {
+				disambFile = int(input[0] - 'a')
+				fileDisamb = true
+			} else if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
+				rowDisamb = true
+				disambRow = int(input[1] - '0')
+			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]x?[a-h][1-8]\n$`, input); err == nil && match {
+				disambFile = int(input[1] - 'a')
+				fileDisamb = true
+			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
+				rowDisamb = true
+				fileDisamb = true
+				disambRow = int(input[1] - '0')
+				disambFile = int(input[1] - 'a')
+			}
+			if rowDisamb && fileDisamb && i != int16(8-(input[2]-'0')) {
+				break
+			} 
+			rowDist := math.Abs(float64(row - i))
+			fileDist := math.Abs(float64(file - j))
+			if board[i][j].teamID == 0 && board[i][j].pieceID == pieceType {
+				switch pieceType {
+				case 'P':
+					spacesCanMove := 1
+					if i == 6 {
+						spacesCanMove = 2
+					}
+					if fileDisamb && j == int16(disambFile) {
+						if ((file == j+1 || file == j-1) && row == i-1) && board[row][file].teamID == 1 {
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							if row == 0 {
+								switch pawnPromote() {
+								case "Q\n":
+									board[row][file] = whiteQueen
+								case "B\n":
+									board[row][file] = whiteBishop
+								case "N\n":
+									board[row][file] = whiteKnight
+								case "R\n":
+									board[row][file] = whiteRook
+								}
+							}
+							success = true
+						} else if ((file == j+1 || file == j-1) && row == i) && board[row][file].canBeEnPassant {
+							board[row-1][file] = board[i][j]
+							board[i][j] = emptySquare
+							board[row][file] = emptySquare
+							success = true
+						}
+					} else if i-row > 0 && i-row <= int16(spacesCanMove) && file == j && board[row][file].pieceID == '0' {
+						board[i][j].canBeEnPassant = false
+						if rowDist == 2 {
+							board[i][j].canBeEnPassant = true
+						} 
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						if row == 0 {
+							switch pawnPromote() {
+							case "Q\n":
+								board[row][file] = whiteQueen
+							case "B\n":
+								board[row][file] = whiteBishop
+							case "N\n":
+								board[row][file] = whiteKnight
+							case "R\n":
+								board[row][file] = whiteRook
+							}
+						}
+						success = true
+					} else if !fileDisamb && file == j && (i-row > 2 || i-row < 1) {
+						return board, false, false
+					}
+
+				case 'K':
+					if checkPieceInWay(board, i, j, row, file) || rowDist > 1 || fileDist > 1 {
+						return board, false, false
+					}
+
+					if (rowDist == fileDist || file-j == 0 || row-i == 0) && board[row][file].teamID != 0 {
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						success = true
+					}
+
+				case 'Q':
+					if (rowDisamb && i == int16(disambRow)) || (fileDisamb && j == int16(disambFile)) || (!fileDisamb && !rowDisamb) {
+						if rowDist == fileDist || file-j == 0 || row-i == 0 {
+							if checkPieceInWay(board, i, j, row, file) {
+								return board, false, false
+							}
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							success = true
+						}
+					}
+
+				case 'R':
+					if (rowDisamb && i == int16(disambRow)) || (fileDisamb && j == int16(disambFile)) || (fileDisamb == rowDisamb) {
+						if file-j == 0 || row-i == 0 {
+							if checkPieceInWay(board, i, j, row, file) {
+								return board, false, false
+							}
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							success = true
+						}
+					}
+
+				case 'N':
+					if (rowDisamb && i == int16(disambRow)) || (fileDisamb && j == int16(disambFile)) || (fileDisamb == rowDisamb) {
+						if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							success = true
+						}
+					}
+				case 'B':
+					if (rowDisamb && i == int16(disambRow)) || (fileDisamb && j == int16(disambFile)) || (fileDisamb == rowDisamb) {
+						if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
+							if checkPieceInWay(board, i, j, row, file) {
+								return board, false, false
+							}
+
+							if rowDist == fileDist {
+								board[row][file] = board[i][j]
+								board[i][j] = emptySquare
+								success = true
+							}
+						}
+					}
+				}
+			}
+			if success {
+				break
+			}		
+		}
+		if success {
+			break
+		}		
+	}
+	if !success {
+		return board, false, false
+	}
+	isCheck, kingSquare, pieceSquare := detectCheckOnKing(board)
+	if isCheck {
+		if board[kingSquare.squareRow][kingSquare.squareFile].teamID == 0 {
+			return prevBoard, false, false
+		} else {
+			if isMate := isMate(int(kingSquare.squareRow), int(kingSquare.squareFile), int(pieceSquare.squareRow), int(pieceSquare.squareFile), board); isMate {
+				return board, true, true
+			}
+			return board, true, false
+		}
+	}
+	return board, true, false
+}
+
+func blackMovement(board [8][8]Piece, row int16, file int16, pieceType int, input string) ([8][8]Piece, bool, bool) {
+	success := false
+	prevBoard := board
+	if board[row][file].teamID == 1 {
+		return board, false, false
+	}
+	for i := int16(0); i < 8; i++ {
+		for j := int16(0); j < 8; j++ {
+			fileDisamb := false
+			rowDisamb := false
+			disambRow := -1
+			disambFile := -1
+			// Checking for disambiguation
+			if match, err := regexp.MatchString(`^[a-h]x[a-h][1-8]\n$`, input); err == nil && match {
+				fileDisamb = true
+				disambFile = int(input[0] - 'a')
+			} else if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
+				rowDisamb = true
+				disambRow = int(input[1] - '0')
+			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]x?[a-h][1-8]\n$`, input); err == nil && match {
+				fileDisamb = true
+				disambFile = int(input[1] - 'a')
+			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
+				fileDisamb = true
+				rowDisamb = true
+				disambRow = int(input[1] - '0')
+				disambFile = int(input[1] - 'a')
+			}
+			rowDist := math.Abs(float64(row - i))
+			fileDist := math.Abs(float64(file - j))
+			if board[i][j].teamID == 1 && int16(board[i][j].pieceID) == int16(pieceType) {
+				switch pieceType {
+				case 'P':
+					spacesCanMove := 1
+					if i == 1 {
+						spacesCanMove = 2
+					}
+					if fileDisamb && j == int16(disambFile) {
+						if ((file == j+1 || file == j-1) && row == i+1) && board[row][file].teamID == 0 {
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							if row == 7 {
+								switch pawnPromote() {
+								case "Q\n":
+									board[row][file] = whiteQueen
+								case "B\n":
+									board[row][file] = whiteBishop
+								case "N\n":
+									board[row][file] = whiteKnight
+								case "R\n":
+									board[row][file] = whiteRook
+								}
+							}
+							success = true
+						} else if ((file == j+1 || file == j-1) && row == i) && board[row][file].canBeEnPassant {
+							board[row+1][file] = board[i][j]
+							board[i][j] = emptySquare
+							board[row][file] = emptySquare
+							success = true
+						}
+					}
+					if row-i > 0 && row-i <= int16(spacesCanMove) && file == j && board[row][file].pieceID == '0' {
+						board[i][j].canBeEnPassant = false
+						if rowDist == 2 {
+							board[i][j].canBeEnPassant = true
+						}
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						spacesCanMove = 1
+						if row == 7 {
+							switch pawnPromote() {
+							case "Q\n":
+								board[row][file] = whiteQueen
+							case "B\n":
+								board[row][file] = whiteBishop
+							case "N\n":
+								board[row][file] = whiteKnight
+							case "R\n":
+								board[row][file] = whiteRook
+							}
+						}
+						success = true
+					} else if !fileDisamb && file == j && (row - i > 2 || row - i < 1) {
+						return board, false, false
+					}
+	
+				case 'K':
+					if checkPieceInWay(board, i, j, row, file) || rowDist > 1 || fileDist > 1 {
+						return board, false, false
+					}
+
+					if (rowDist == fileDist || file-j == 0 || row-i == 0) && board[row][file].teamID != 1 {
+						board[row][file] = board[i][j]
+						board[i][j] = emptySquare
+						success = true
+					}
+
+				case 'Q':
+					if (rowDisamb && i == int16(disambRow)) || (fileDisamb && j == int16(disambFile)) || (fileDisamb == rowDisamb) {
+						if rowDist == fileDist || file-j == 0 || row-i == 0 {
+							if checkPieceInWay(board, i, j, row, file) {
+								return board, false, false
+							}
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							success = true
+						}
+					}
+
+				case 'R':
+					if (rowDisamb && i == int16(disambRow)) || (fileDisamb && j == int16(disambFile)) || (fileDisamb == rowDisamb) {
+						if file-j == 0 || row-i == 0 {
+							if checkPieceInWay(board, i, j, row, file) {
+								return board, false, false
+							}
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							success = true
+						}
+					}
+
+				case 'N':
+					if (rowDisamb && i == int16(disambRow)) || (fileDisamb && j == int16(disambFile)) || (fileDisamb == rowDisamb) {
+						if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
+							board[row][file] = board[i][j]
+							board[i][j] = emptySquare
+							success = true
+						}
+					}
+
+				case 'B':
+					if (rowDisamb && i == int16(disambRow)) || (fileDisamb && j == int16(disambFile)) || (fileDisamb == rowDisamb) {
+						if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
+							if checkPieceInWay(board, i, j, row, file) {
+								return board, false, false
+							}
+
+							if rowDist == fileDist {
+								board[row][file] = board[i][j]
+								board[i][j] = emptySquare
+								success = true
+							}
+						}
+					}
+				}
+			}
+			if success {
+				break;
+			}
+		}
+		if success {
+			break;
+		}
+	}
+	if !success {
+		return board, false, false
+	}
+	isCheck, kingSquare, pieceSquare := detectCheckOnKing(board)
+	if isCheck {
+		if board[kingSquare.squareRow][kingSquare.squareFile].teamID == 1 {
+			return prevBoard, false, false
+		} else {
+			if isMate := isMate(int(kingSquare.squareRow), int(kingSquare.squareFile), int(pieceSquare.squareRow), int(pieceSquare.squareFile), board); isMate {
+				return board, true, true
+			}
+			return board, true, false
+		}
+	}
+	return board, true, false
 }
