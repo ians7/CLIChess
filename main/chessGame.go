@@ -555,9 +555,6 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 			// Checking for disambiguation
 			if match, err := regexp.MatchString(`^[a-h]x[a-h][1-8]\n$`, input); err == nil && match {
 				disambFile = int(input[0] - 'a')
-				if pieceType == 'P' && int16(disambFile ) != i {
-					break
-				}
 				fileDisamb = true
 			} else if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
 				rowDisamb = true
@@ -584,7 +581,6 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 						spacesCanMove = 2
 					}
 					if fileDisamb && j == int16(disambFile) {
-						fmt.Println(file == j + 1, file == j - 1, row == i - 1, board[row][file].teamID)
 						if ((file == j+1 || file == j-1) && row == i-1) && board[row][file].teamID == 1 {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
@@ -611,10 +607,7 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 						board[i][j].canBeEnPassant = false
 						if rowDist == 2 {
 							board[i][j].canBeEnPassant = true
-						} else if checkPieceInWay(board, i, j, row, file) {
-							fmt.Println("piece in the way")
-							return board, false, false
-						}
+						} 
 						board[row][file] = board[i][j]
 						board[i][j] = emptySquare
 						if row == 0 {
@@ -630,7 +623,7 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 							}
 						}
 						success = true
-					} else if file == j && (i-row > 2 || i-row < 1) {
+					} else if !fileDisamb && file == j && (i-row > 2 || i-row < 1) {
 						fmt.Println("impossible move", i, j, row, file)
 						return board, false, false
 					}
@@ -694,7 +687,13 @@ func whiteMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 					}
 				}
 			}
+			if success {
+				break
+			}		
 		}
+		if success {
+			break
+		}		
 	}
 	if !success {
 		return board, false, false
@@ -738,11 +737,10 @@ func blackMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 				fileDisamb = true
 				disambFile = int(input[1] - 'a')
 			} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
+				fileDisamb = true
+				rowDisamb = true
 				disambRow = int(input[1] - '0')
 				disambFile = int(input[1] - 'a')
-				if board[input[1]-'a'][input[2]-'0'].pieceID != pieceType {
-					break
-				}
 			}
 			rowDist := math.Abs(float64(row - i))
 			fileDist := math.Abs(float64(file - j))
@@ -754,6 +752,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 						spacesCanMove = 2
 					}
 					if fileDisamb && j == int16(disambFile) {
+						fmt.Println(((file == j+1 || file == j-1) && row == i) && board[row][file].canBeEnPassant)
 						if ((file == j+1 || file == j-1) && row == i+1) && board[row][file].teamID == 0 {
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
@@ -777,13 +776,11 @@ func blackMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 							success = true
 						}
 					}
-					fmt.Println(file == j, row-i > int16(spacesCanMove), row-i < 1)
+					fmt.Println(file == j, row-i <= int16(spacesCanMove), row-i > 0, board[row][file].pieceID)
 					if row-i > 0 && row-i <= int16(spacesCanMove) && file == j && board[row][file].pieceID == '0' {
 						board[i][j].canBeEnPassant = false
 						if rowDist == 2 {
 							board[i][j].canBeEnPassant = true
-						} else if checkPieceInWay(board, i, j, row, file) {
-							return board, false, false
 						}
 						board[row][file] = board[i][j]
 						board[i][j] = emptySquare
@@ -802,7 +799,7 @@ func blackMovement(board [8][8]Piece, row int16, file int16, pieceType int, inpu
 						}
 						fmt.Println("succesfully moved pawn")
 						success = true
-					} else if file == j && (row - i > int16(spacesCanMove) || row - i < 1) {
+					} else if !fileDisamb && file == j && (row - i > 2 || row - i < 1) {
 						fmt.Println("impossible move", i, j, row, file)
 						return board, false, false
 					}
