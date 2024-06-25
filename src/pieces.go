@@ -144,10 +144,7 @@ func getSpacesCanMove(pieceRow int, pieceFile int, board [8][8]Piece) []Square {
 func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input string) ([8][8]Piece, bool, bool) {
 	prevBoard := board
 	success := false
-	fmt.Println(whiteShortCastle)
-	fmt.Println(whiteLongCastle)
 	if match, err := regexp.MatchString(`^O-O\n$`, input); err == nil && match && whiteShortCastle {
-		fmt.Println("Castling regex is good")
 		if !checkPieceInWay(board, 7, 4, 7, 7) {
 			board[7][6] = board[7][4]
 			board[7][4] = emptySquare
@@ -158,7 +155,6 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 			success = true
 		}
 	} else if match, err := regexp.MatchString(`^O-O-O\n$`, input); err == nil && match && whiteLongCastle {
-		fmt.Println("Castling regex is good")
 		if !checkPieceInWay(board, 7, 4, 7, 0) {
 			board[7][2] = board[7][4]
 			board[7][4] = emptySquare
@@ -331,8 +327,6 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input string) ([8][8]Piece, bool, bool) {
 	success := false
 	prevBoard := board
-	fmt.Println(blackShortCastle)
-	fmt.Println(blackLongCastle)
 	if match, err := regexp.MatchString(`^O-O\n$`, input); err == nil && match && blackShortCastle {
 		if !checkPieceInWay(board, 0, 4, 0, 7) {
 			board[0][6] = board[0][4]

@@ -118,7 +118,6 @@ func parseInput(input string, pieceType *int) bool {
 		*pieceType = 'P'
 		return true
 	} else if match, err := regexp.MatchString(`^O-O(-O)?\n$`, input); err == nil && match {
-		fmt.Println("castle regex is good")
 		return true
 	} else {
 		fmt.Println("Please input valid chess notation (in parse input)", input)
