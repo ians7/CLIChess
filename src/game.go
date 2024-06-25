@@ -140,9 +140,9 @@ func isMate(kingRow int, kingFile int, pieceRow int, pieceFile int, board [8][8]
 				spacesCanMove = getSpacesCanMove(i, j, board)
 				for _, squareBetween := range spacesBetween {
 					for _, squareMove := range spacesCanMove {
-						if squareMove.squareRow == squareBetween.squareRow && squareMove.squareFile == squareBetween.squareFile {
+						if squareMove.row == squareBetween.row && squareMove.file == squareBetween.file {
 							return false
-						}
+						}	
 					}
 				}
 			}

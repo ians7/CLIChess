@@ -170,20 +170,22 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 	prevBoard := board
 	success := false
 	if match, err := regexp.MatchString(`^O-O\n$`, input); err == nil && match && whiteShortCastle {
-		if !checkPieceInWay(board, 7, 4, 7, 7) {
+		if !checkPieceInWay(board, 7, 4, 7, 7) && !blockingCastle(board, Square{7, 4}, Square{7, 7}) {
 			board[7][6] = board[7][4]
 			board[7][4] = emptySquare
 			board[7][5] = board[7][7]
 			board[7][7] = emptySquare
+			success = true
 			whiteLongCastle = false
 			whiteShortCastle = false
 		}
 	} else if match, err := regexp.MatchString(`^O-O-O\n$`, input); err == nil && match && whiteLongCastle {
-		if !checkPieceInWay(board, 7, 4, 7, 0) {
+		if !checkPieceInWay(board, 7, 4, 7, 0) && !blockingCastle(board, Square{7, 4}, Square{7, 0}) {
 			board[7][2] = board[7][4]
 			board[7][4] = emptySquare
 			board[7][3] = board[7][0]
 			board[7][0] = emptySquare
+			success = true
 			whiteLongCastle = false
 			whiteShortCastle = false
 		}
@@ -335,10 +337,10 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 	}
 	isCheck, kingSquare, pieceSquare := detectCheckOnKing(board)
 	if isCheck {
-		if board[kingSquare.squareRow][kingSquare.squareFile].teamID == 0 {
+		if board[kingSquare.row][kingSquare.file].teamID == 0 {
 			return prevBoard, false, false
 		} else {
-			if isMate := isMate(kingSquare.squareRow, kingSquare.squareFile, pieceSquare.squareRow, pieceSquare.squareFile, board); isMate {
+			if isMate := isMate(kingSquare.row, kingSquare.file, pieceSquare.row, pieceSquare.file, board); isMate {
 				return board, true, true
 			}
 			return board, true, false
@@ -351,7 +353,7 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 	success := false
 	prevBoard := board
 	if match, err := regexp.MatchString(`^O-O\n$`, input); err == nil && match && blackShortCastle {
-		if !checkPieceInWay(board, 0, 4, 0, 7) {
+		if !checkPieceInWay(board, 0, 4, 0, 7) && !blockingCastle(board, Square{0, 4}, Square{0, 7}) {
 			board[0][6] = board[0][4]
 			board[0][4] = emptySquare
 			board[0][5] = board[0][7]
@@ -361,7 +363,7 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 			success = true
 		}
 	} else if match, err := regexp.MatchString(`^O-O-O\n$`, input); err == nil && match && blackLongCastle {
-		if !checkPieceInWay(board, 0, 4, 0, 0) {
+		if !checkPieceInWay(board, 0, 4, 0, 0) && !blockingCastle(board, Square{0, 4}, Square{0, 0}) {
 			board[0][2] = board[0][4]
 			board[0][4] = emptySquare
 			board[0][3] = board[0][0]
@@ -517,10 +519,10 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 	}
 	isCheck, kingSquare, pieceSquare := detectCheckOnKing(board)
 	if isCheck {
-		if board[kingSquare.squareRow][kingSquare.squareFile].teamID == 1 {
+		if board[kingSquare.row][kingSquare.file].teamID == 1 {
 			return prevBoard, false, false
 		} else {
-			if isMate := isMate(kingSquare.squareRow, kingSquare.squareFile, pieceSquare.squareRow, pieceSquare.squareFile, board); isMate {
+			if isMate := isMate(kingSquare.row, kingSquare.file, pieceSquare.row, pieceSquare.file, board); isMate {
 				return board, true, true
 			}
 			return board, true, false
@@ -545,4 +547,23 @@ func parseDisamb(fileDisamb* bool, rowDisamb* bool, disambRow* int, disambFile* 
 		*disambRow = int(input[1] - '0')
 		*disambFile = int(input[1] - 'a')
 	}
+}
+func blockingCastle(board [8][8]Piece, kingSquare Square, rookSquare Square) bool {
+	var spacesBetween []Square = getSpacesBetween(board, kingSquare.row, kingSquare.file, rookSquare.row, rookSquare.file)
+	var spacesCanMove []Square
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 8; j++ {
+			if board[i][j].teamID != board[kingSquare.row][kingSquare.file].teamID {
+				spacesCanMove = getSpacesCanMove(i, j, board)
+				for _, squareBetween := range spacesBetween {
+					for _, squareMove := range spacesCanMove {
+						if squareMove.row == squareBetween.row && squareMove.file == squareBetween.file {
+							return true
+						}	
+					}
+				}
+			}
+		}
+	}
+	return false
 }

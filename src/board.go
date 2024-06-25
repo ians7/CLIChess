@@ -5,8 +5,8 @@ import (
 )
 
 type Square struct {
-	squareRow  int
-	squareFile int
+	row  int
+	file int
 }
 
 
