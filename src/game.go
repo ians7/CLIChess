@@ -60,8 +60,8 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		return board, false, isMate
 	}
 	if pieceType != -1 {
-		row = int(int16(8 - (input[len(input)-2] - '0')))
-		file = int(int16(input[len(input)-3] - 'a'))
+		row = int(8 - (input[len(input)-2] - '0'))
+		file = int(input[len(input)-3] - 'a')
 	} 
 	if (row > 8 || row < 0 || file > 8 || file < 0) && pieceType != -1 {
 		return board, false, isMate
@@ -71,6 +71,7 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		tempBoard, success, isMate := whiteMovement(board, row, file, pieceType, input)
 		if isMate {
 			isMate = true
+			printBoard(tempBoard)
 			fmt.Println("White wins!")
 		}
 		if success {
@@ -83,6 +84,7 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		tempBoard, success, isMate := blackMovement(board, row, file, pieceType, input)
 		if isMate {
 			isMate = true
+			printBoard(tempBoard)
 			fmt.Println("Black wins!")
 		}
 		if success {
@@ -126,7 +128,7 @@ func parseInput(input string, pieceType *int) bool {
 	}
 }
 
-func isMate(kingRow int, kingFile int, pieceFile int, pieceRow int, board [8][8]Piece) bool {
+func isMate(kingRow int, kingFile int, pieceRow int, pieceFile int, board [8][8]Piece) bool {
 	var spacesBetween []Square = getSpacesBetween(board, kingRow, kingFile, pieceRow, pieceFile)
 	var spacesCanMove []Square
 	if len(getSpacesCanMove(kingRow, kingFile, board)) > 0 {
@@ -139,7 +141,7 @@ func isMate(kingRow int, kingFile int, pieceFile int, pieceRow int, board [8][8]
 				for _, squareBetween := range spacesBetween {
 					for _, squareMove := range spacesCanMove {
 						if squareMove.squareRow == squareBetween.squareRow && squareMove.squareFile == squareBetween.squareFile {
-								return false
+							return false
 						}
 					}
 				}

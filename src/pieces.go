@@ -140,6 +140,31 @@ func getSpacesCanMove(pieceRow int, pieceFile int, board [8][8]Piece) []Square {
 	return spacesCanMove
 }
 
+func getSpacesBetween(board [8][8]Piece, kingRow int, kingFile int, pieceRow int, pieceFile int) []Square {
+	var spacesBetween []Square
+	rowIterator := 1
+	fileIterator := 1
+	if kingRow > pieceRow {
+		rowIterator = -1
+	} else if kingRow == pieceRow {
+		rowIterator = 0
+	}
+	if kingFile > pieceFile {
+		fileIterator = -1
+	} else if kingFile == pieceRow {
+		fileIterator = 0
+	}
+
+	k, l := kingRow, kingFile
+	k += rowIterator
+	l += fileIterator
+	for !(k == pieceRow && l == pieceFile) && k > 0 && l > 0 && k < 8 && l < 8 {
+		spacesBetween = append(spacesBetween, Square{k, l})
+		k += rowIterator
+		l += fileIterator
+	}
+	return spacesBetween
+}
 
 func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input string) ([8][8]Piece, bool, bool) {
 	prevBoard := board
@@ -152,7 +177,6 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 			board[7][7] = emptySquare
 			whiteLongCastle = false
 			whiteShortCastle = false
-			success = true
 		}
 	} else if match, err := regexp.MatchString(`^O-O-O\n$`, input); err == nil && match && whiteLongCastle {
 		if !checkPieceInWay(board, 7, 4, 7, 0) {
@@ -162,7 +186,6 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 			board[7][0] = emptySquare
 			whiteLongCastle = false
 			whiteShortCastle = false
-			success = true
 		}
 	}
 	if board[row][file].teamID == 0 {
@@ -315,7 +338,7 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 		if board[kingSquare.squareRow][kingSquare.squareFile].teamID == 0 {
 			return prevBoard, false, false
 		} else {
-			if isMate := isMate(int(kingSquare.squareRow), int(kingSquare.squareFile), int(pieceSquare.squareRow), int(pieceSquare.squareFile), board); isMate {
+			if isMate := isMate(kingSquare.squareRow, kingSquare.squareFile, pieceSquare.squareRow, pieceSquare.squareFile, board); isMate {
 				return board, true, true
 			}
 			return board, true, false
@@ -497,7 +520,7 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 		if board[kingSquare.squareRow][kingSquare.squareFile].teamID == 1 {
 			return prevBoard, false, false
 		} else {
-			if isMate := isMate(int(kingSquare.squareRow), int(kingSquare.squareFile), int(pieceSquare.squareRow), int(pieceSquare.squareFile), board); isMate {
+			if isMate := isMate(kingSquare.squareRow, kingSquare.squareFile, pieceSquare.squareRow, pieceSquare.squareFile, board); isMate {
 				return board, true, true
 			}
 			return board, true, false

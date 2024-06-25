@@ -90,28 +90,3 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int, pieceFile int, destRow int
 	return false
 }
 
-func getSpacesBetween(board [8][8]Piece, kingRow int, kingFile int, pieceRow int, pieceFile int) []Square {
-	var spacesBetween []Square
-	rowIterator := 1
-	fileIterator := 1
-	if kingRow > pieceRow {
-		rowIterator = -1
-	} else if kingRow == pieceRow {
-		rowIterator = 0
-	}
-	if kingFile > pieceRow {
-		fileIterator = -1
-	} else if kingFile == pieceRow {
-		fileIterator = 0
-	}
-
-	k, l := kingRow, kingFile
-	k += rowIterator
-	l += fileIterator
-	for !(k == pieceRow && l == pieceFile) && k > 0 && l > 0 && k < 8 && l < 8 {
-		spacesBetween = append(spacesBetween, Square{k, l})
-		k += rowIterator
-		l += fileIterator
-	}
-	return spacesBetween
-}
