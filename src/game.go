@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"math"
-	"os"
 	"regexp"
 )
 
@@ -16,40 +14,6 @@ var (
 	blackShortCastle = true
 )
 
-func main() {
-	board := initializeBoard()
-	fmt.Println("Enter proper chess notation to make a move.")
-	whiteTurn := true
-	isMate := false
-	for {
-		printBoard(board)
-
-		if whiteTurn {
-			fmt.Printf("White move: ")
-		} else {
-			fmt.Printf("Black move: ")
-		}
-
-		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Failed to read user input. Aborting.")
-		}
-		success := false
-		board, success, isMate = executeTurn(input, whiteTurn, board)
-		if success {
-			if isMate {
-				return
-			}
-			whiteTurn = !whiteTurn
-		} else {
-			fmt.Println("Please input a valid move.")
-		}
-	}
-
-}
-
-
 func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, bool, bool) {
 	isMate := false
 	row := 0
@@ -60,8 +24,8 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		return board, false, isMate
 	}
 	if pieceType != -1 {
-		row = int(8 - (input[len(input)-2] - '0'))
-		file = int(input[len(input)-3] - 'a')
+		row = int(8 - (input[len(input)-1] - '0'))
+		file = int(input[len(input)-2] - 'a')
 	} 
 	if (row > 8 || row < 0 || file > 8 || file < 0) && pieceType != -1 {
 		return board, false, isMate
@@ -99,27 +63,27 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 }
 
 func parseInput(input string, pieceType *int) bool {
-	if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?x[a-h][1-8]\n$`, input); err == nil && match {
+	if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?x[a-h][1-8]$`, input); err == nil && match {
 		if input[0] >= 97 && input[0] <= 104 {
 			*pieceType = 'P'
 		} else {
 			*pieceType = int(input[0])
 		}
 		return true
-	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?[a-h][1-8]\n$`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?[a-h][1-8]$`, input); err == nil && match {
 		if input[0] >= 97 && input[0] <= 104 {
 			*pieceType = 'P'
 		} else {
 			*pieceType = int(input[0])
 		}
 		return true
-	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]\n$`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]$`, input); err == nil && match {
 		*pieceType = int(input[0])
 		return true
-	} else if match, err := regexp.MatchString(`^[a-h][1-8]\n$`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^[a-h][1-8]$`, input); err == nil && match {
 		*pieceType = 'P'
 		return true
-	} else if match, err := regexp.MatchString(`^O-O(-O)?\n$`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^O-O(-O)?$`, input); err == nil && match {
 		return true
 	} else {
 		fmt.Println("Please input valid chess notation (in parse input)", input)

@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 type Square struct {
 	row  int
 	file int
@@ -21,7 +17,6 @@ var (
 )
 
 func initializeBoard() [8][8]Piece {
-
 	board := [8][8]Piece{
 		{blackRook, blackKnight, blackBishop, blackQueen, blackKing, blackBishop, blackKnight, blackRook},
 		{blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn, blackPawn},
@@ -36,31 +31,6 @@ func initializeBoard() [8][8]Piece {
 }
 
 func printBoard(board [8][8]Piece) {
-	fmt.Printf(W + "  a   b   c   d   e   f   g   h\n")
-	fmt.Printf(Br + " -------------------------------\n")
-	bgColor := bgRed
-	colorBool := true
-	pieceColor := B
-	for i := 0; i < 8; i++ {
-		fmt.Printf(Br + "|")
-		for j := 0; j < 8; j++ {
-			if board[i][j].teamID == 1 {
-				pieceColor = B
-			} else if board[i][j].teamID == 0 {
-				pieceColor = W
-			}
-			if colorBool {
-				bgColor = bgRed
-			} else {
-				bgColor = bgCyan
-			}
-			fmt.Printf(bgColor+pieceColor+" %c "+Br+bgBlack+"|", board[i][j].icon)
-			colorBool = !colorBool
-		}
-	fmt.Printf(W+" %d", 8-i)
-		fmt.Printf(Br + "\n -------------------------------\n" + W)
-		colorBool = !colorBool
-	}
 }
 
 func checkPieceInWay(board [8][8]Piece, pieceRow int, pieceFile int, destRow int, destFile int) bool {
