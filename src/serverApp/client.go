@@ -10,7 +10,7 @@ import (
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	conn, conErr := net.Dial("tcp", "172.19.142.219:20000")
+	conn, conErr := net.Dial("tcp", ":20000")
 	if conErr != nil {
 		fmt.Println("Failed to connect to the server")
 		return
