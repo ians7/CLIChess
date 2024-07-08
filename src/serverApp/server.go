@@ -51,25 +51,44 @@ func gameLoop(p1Conn net.Conn, p2Conn net.Conn, game Game) error {
 	isMate := false
 	whiteMsg := "White turn: "
 	blackMsg := "Black turn: " 
+	whiteBoard := []byte(createWhiteBoardMsg(game.board))
+	blackBoard := []byte(createBlackBoardMsg(game.board))
+	p1Conn.Write(whiteBoard)
+	p1Conn.Write([]byte(whiteMsg))
+	p2Conn.Write(blackBoard)
+	p2Conn.Write([]byte("Waiting for opponent...\n"))
 	for {
 		buf := make([]byte, 64)
-		whiteBoard := []byte(createWhiteBoardMsg(game.board))
-		blackBoard := []byte(createBlackBoardMsg(game.board))
-		p1Conn.Write(whiteBoard)
-		p2Conn.Write(blackBoard)
 		input, err := handleInput(game, whiteMsg, blackMsg, buf, p1Conn, p2Conn)	
 		if err != nil {
 			return fmt.Errorf("Error reading user input")
 		}
 		game.board, success, isMate = executeTurn(input, game.turn, game.board)
+		whiteBoard = []byte(createWhiteBoardMsg(game.board))
+		blackBoard = []byte(createBlackBoardMsg(game.board))
 		if (!success) {
-			handleImproperInput(game, whiteBoard, p1Conn, p2Conn)
+			if game.turn {
+				p1Conn.Write([]byte("\rinvalid input\n"))
+				p1Conn.Write([]byte(whiteMsg))
+			} else {
+				p2Conn.Write([]byte("\rinvalid input\n"))
+				p2Conn.Write([]byte(blackMsg))
+			}
 		} else {
 			if isMate {
 				handleMate(game, p1Conn, p2Conn)
 				break
 			}
+			p1Conn.Write(whiteBoard)
+			p2Conn.Write(blackBoard)
 			game.turn = !game.turn
+			if game.turn {
+				p2Conn.Write([]byte("Waiting for opponent...\n"))
+				p1Conn.Write([]byte(whiteMsg))
+			} else {
+				p1Conn.Write([]byte("Waiting for opponent...\n"))
+				p2Conn.Write([]byte(blackMsg))
+			}
 		}
 	}
 	return nil
@@ -79,29 +98,17 @@ func handleInput(game Game, whiteMsg string, blackMsg string, buf []byte, p1Conn
 	n := -1
 	var err error
 	if game.turn {
-		p1Conn.Write([]byte(whiteMsg))
-		p2Conn.Write([]byte("Waiting for opponent...\n"))
 		n, err = p1Conn.Read(buf)
 		if err != nil {
 			return "", fmt.Errorf("Error reading user input") 
 		}
 	} else {
-		p2Conn.Write([]byte(blackMsg))
-		p1Conn.Write([]byte("Waiting for opponent...\n"))
 		n, err = p2Conn.Read(buf)
 		if err != nil {
 			return "", fmt.Errorf("Error reading user input") 
 		}
 	}
 	return string(buf[:n]), nil
-}
-
-func handleImproperInput(game Game, board []byte, p1Conn net.Conn, p2Conn net.Conn) {
-	if game.turn {
-		p1Conn.Write([]byte("invalid input\n"))
-	} else {
-		p2Conn.Write([]byte("invalid input\n"))
-	}
 }
 
 func handleMate(game Game, p1Conn net.Conn, p2Conn net.Conn) {
