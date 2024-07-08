@@ -10,7 +10,7 @@ import (
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	conn, conErr := net.Dial("tcp", "172.19.142.219:20000")
+	conn, conErr := net.Dial("tcp", "127.0.0.1:20000")
 	if conErr != nil {
 		fmt.Println("Failed to connect to the server")
 		return
@@ -21,7 +21,7 @@ func main() {
 	cmd.Run()
 	teamBuf := make([]byte, 1)
 	n, error1 := conn.Read(teamBuf)
-	if error1 != nil {
+	if error1 != nil || n == 0 {
 		fmt.Println("Failed to read team byte")
 		return
 	}
@@ -32,16 +32,12 @@ func main() {
 		myTurn = false
 	}
 
-	var err error = nil
-	buf := make([]byte, 512)
+	buf := make([]byte, 4096)
+	c := make(chan string)
 	for {
-		for {
-			n, err = conn.Read(buf)
-			fmt.Printf("%s", string(buf[:n]))
-			if n < 512 || err != nil {
-				break
-			}
-		}
+		go readString(c, conn, buf)
+		str := <- c
+		fmt.Printf("%s", str)
 		if myTurn{
 			scanner.Scan()
 			conn.Write([]byte(scanner.Text()))
@@ -50,4 +46,13 @@ func main() {
 	}
 }
 
+func readString(c chan string, conn net.Conn, buf []byte) {
+	n, err := conn.Read(buf)
+	if n < 512 {
 
+	}
+	if err != nil {
+		return
+	}
+	c <- string(buf[:n])
+}
