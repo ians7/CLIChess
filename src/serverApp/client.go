@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"os"
 	"os/exec"
+	"regexp"
 )
 
 func main() {
@@ -19,40 +20,57 @@ func main() {
 	cmd := exec.Command("clear")
 	cmd.Stdout = os.Stdout
 	cmd.Run()
-	teamBuf := make([]byte, 1)
-	n, error1 := conn.Read(teamBuf)
-	if error1 != nil || n == 0 {
-		fmt.Println("Failed to read team byte")
-		return
-	}
-	myTurn := false
-	if teamBuf[0] == '0' {
-		myTurn = true
-	} else if teamBuf[0] == '1' {
-		myTurn = false
-	}
 
 	buf := make([]byte, 4096)
-	c := make(chan string)
+	inputc := make(chan string)
+	myTurn := -1
+	go readString(inputc, conn, buf)
+	str := <- inputc
+	fmt.Printf("%s", str[1:len(str)])
+
 	for {
-		go readString(c, conn, buf)
-		str := <- c
-		fmt.Printf("%s", str)
-		if myTurn{
-			scanner.Scan()
-			conn.Write([]byte(scanner.Text()))
+		if str[0] - 48 == 0 {
+			myTurn = 0
+		} else {
+			myTurn = 1
+		}	
+		if myTurn == 1 {
+			for {
+				scanner.Scan()
+				if verifyInput(scanner.Text()) {
+					conn.Write([]byte(scanner.Text()))
+					break
+				} else {
+					fmt.Println("\rInvalid input.\n")
+				}
+			}	
 		}
-		myTurn = !myTurn
+		go readString(inputc, conn, buf)
+		str = <- inputc
+		fmt.Printf("%s", str[1:len(str)])
 	}
 }
 
 func readString(c chan string, conn net.Conn, buf []byte) {
 	n, err := conn.Read(buf)
-	if n < 512 {
-
-	}
 	if err != nil {
 		return
 	}
 	c <- string(buf[:n])
+}
+
+func verifyInput(input string) bool {
+	if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?x[a-h][1-8]$`, input); err == nil && match {
+		return true
+	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?[a-h][1-8]$`, input); err == nil && match {
+		return true
+	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]$`, input); err == nil && match {
+		return true
+	} else if match, err := regexp.MatchString(`^[a-h][1-8]$`, input); err == nil && match {
+		return true
+	} else if match, err := regexp.MatchString(`^O-O(-O)?$`, input); err == nil && match {
+		return true
+	} else {
+		return false
+	}
 }

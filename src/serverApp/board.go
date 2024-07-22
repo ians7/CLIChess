@@ -30,9 +30,6 @@ func initializeBoard() [8][8]Piece {
 	return board
 }
 
-func printBoard(board [8][8]Piece) {
-}
-
 func checkPieceInWay(board [8][8]Piece, pieceRow int, pieceFile int, destRow int, destFile int) bool {
 	rowIterator := 1
 	fileIterator := 1

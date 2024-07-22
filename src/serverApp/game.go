@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math"
-	"regexp"
 )
 
 
@@ -19,15 +18,14 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 	row := 0
 	file := 0
 	prevBoard := board
-	pieceType := -1 
-	if !parseInput(input, &pieceType) {
-		return board, false, isMate
-	}
-	if pieceType != -1 {
+	pieceType := parsePieceType(input)
+
+	if pieceType != -1 && pieceType != 'O' {
 		row = int(8 - (input[len(input)-1] - '0'))
 		file = int(input[len(input)-2] - 'a')
 	} 
-	if (row > 8 || row < 0 || file > 8 || file < 0) && pieceType != -1 {
+
+	if (row > 8 || row < 0 || file > 8 || file < 0) && pieceType != -1 && pieceType != 'O' {
 		return board, false, isMate
 	}
 
@@ -35,7 +33,6 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		tempBoard, success, isMate := whiteMovement(board, row, file, pieceType, input)
 		if isMate {
 			isMate = true
-			printBoard(tempBoard)
 			fmt.Println("White wins!")
 		}
 		if success {
@@ -48,10 +45,8 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 		tempBoard, success, isMate := blackMovement(board, row, file, pieceType, input)
 		if isMate {
 			isMate = true
-			printBoard(tempBoard)
 			fmt.Println("Black wins!")
-		}
-		if success {
+		} else if success {
 			tempBoard = removeWhiteEnPassant(tempBoard)
 			return tempBoard, success, isMate
 		} else {
@@ -62,34 +57,20 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 	return board, false, isMate
 }
 
-func parseInput(input string, pieceType *int) bool {
-	if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?x[a-h][1-8]$`, input); err == nil && match {
-		if input[0] >= 97 && input[0] <= 104 {
-			*pieceType = 'P'
-		} else {
-			*pieceType = int(input[0])
+func parsePieceType(input string) int {
+	pieceType := -1
+	for i := 0 ; i < len(input) ; i++ {
+		if input[i] >= 65 && input[i] <= 90 {
+			pieceType = int(input[i])
 		}
-		return true
-	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?[a-h][1-8]$`, input); err == nil && match {
-		if input[0] >= 97 && input[0] <= 104 {
-			*pieceType = 'P'
-		} else {
-			*pieceType = int(input[0])
-		}
-		return true
-	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]$`, input); err == nil && match {
-		*pieceType = int(input[0])
-		return true
-	} else if match, err := regexp.MatchString(`^[a-h][1-8]$`, input); err == nil && match {
-		*pieceType = 'P'
-		return true
-	} else if match, err := regexp.MatchString(`^O-O(-O)?$`, input); err == nil && match {
-		return true
-	} else {
-		fmt.Println("Please input valid chess notation (in parse input)", input)
-		fmt.Println(match, err)
-		return false
 	}
+	if pieceType == -1 && pieceType != 'O' {
+		pieceType = 'P'
+	} else if pieceType == 'O' {
+		pieceType = 'O'
+		fmt.Println("pieceType =", pieceType)
+	}
+	return int(pieceType)
 }
 
 func isMate(kingRow int, kingFile int, pieceRow int, pieceFile int, board [8][8]Piece) bool {
