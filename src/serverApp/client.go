@@ -70,7 +70,9 @@ func verifyInput(input string) bool {
 		return true
 	} else if match, err := regexp.MatchString(`^O-O(-O)?$`, input); err == nil && match {
 		return true
-	} else {
+	} else if match, err := regexp.MatchString(`^[a-h]x[a-h][1-8]$`, input); err == nil && match {
+		return true
+	}else {
 		return false
 	}
 }
