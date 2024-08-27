@@ -33,9 +33,7 @@ func main() {
 	for {
 		game := createGame()
 		gameLoop(player1Conn, player2Conn, game)
-		if err == nil {
-			break
-		}
+		return
 	}
 }
 
@@ -51,19 +49,18 @@ func gameLoop(p1Conn net.Conn, p2Conn net.Conn, game Game) error {
 	blackMsg := "Black turn: " 
 	whiteBoard := createWhiteBoardMsg(game.board)
 	blackBoard := createBlackBoardMsg(game.board)
-
 	p1Conn.Write([]byte("1" + whiteBoard + whiteMsg))
 	p2Conn.Write([]byte("0" + blackBoard + "Waiting for opponent...\n"))
 	for {
 		buf := make([]byte, 64)
 
-		input, err := handleInput(game, whiteMsg, blackMsg, buf, p1Conn, p2Conn)	
+		input, err := handleInput(game, buf, p1Conn, p2Conn)	
 		if err != nil {
 			return fmt.Errorf("Error reading user input")
 		}
 		game.board, success, isMate = executeTurn(input, game.turn, game.board)
-		whiteBoard = createWhiteBoardMsg(game.board)
-		blackBoard = createBlackBoardMsg(game.board)
+		whiteBoard := createWhiteBoardMsg(game.board)
+		blackBoard := createBlackBoardMsg(game.board)
 		if success {
 			game.turn = !game.turn
 			if isMate {
@@ -71,20 +68,25 @@ func gameLoop(p1Conn net.Conn, p2Conn net.Conn, game Game) error {
 				break
 			}
 			if game.turn {
-				p2Conn.Write([]byte("0" + blackBoard + "Waiting for opponent...\n"))
 				p1Conn.Write([]byte("1" + whiteBoard + whiteMsg))
+				p2Conn.Write([]byte("0" + blackBoard + "Waiting for opponent...\n"))
 			} else {
 				p1Conn.Write([]byte("0" + whiteBoard + "Waiting for opponent...\n"))
 				p2Conn.Write([]byte("1" + blackBoard + blackMsg))
 			}
 		} else {
 			fmt.Println("input = ", input)
+			if game.turn {
+				p1Conn.Write([]byte("1" + "\rInvalid input.\n"))
+			} else {
+				p2Conn.Write([]byte("1" + "\rInvalid input.\n"))
+			}
 		}
 	}
 	return nil
 }
 
-func handleInput(game Game, whiteMsg string, blackMsg string, buf []byte, p1Conn net.Conn, p2Conn net.Conn) (string, error) {
+func handleInput(game Game, buf []byte, p1Conn net.Conn, p2Conn net.Conn) (string, error) {
 	n := -1
 	var err error
 	if game.turn {

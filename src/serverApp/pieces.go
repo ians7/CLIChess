@@ -39,7 +39,7 @@ func pawnPromote() string {
 		if err != nil {
 			fmt.Println("Failed. Aborting.")
 		}
-		if match, err := regexp.MatchString(`^[QNBR]\n$`, input); err == nil && match {
+		if match, err := regexp.MatchString(`^[QNBR]$`, input); err == nil && match {
 			return input
 		} else {
 			fmt.Println("Improper input.")
@@ -116,7 +116,15 @@ func getSpacesCanMove(pieceRow int, pieceFile int, board [8][8]Piece) []Square {
 		for i := 0; i < 8; i++ {
 			for j := 0; j < 8; j++ {
 				if currPiece.teamID == 0 {
+					tempBlackLongCastle := blackLongCastle
+					tempBlackShortCastle := blackShortCastle
+					tempWhiteLongCastle := whiteLongCastle
+					tempWhiteShortCastle := whiteShortCastle
 					board, success, isMate := whiteMovement(board, i, j, 'K', "")
+					blackLongCastle = tempBlackLongCastle
+					blackShortCastle = tempBlackShortCastle
+					whiteLongCastle = tempWhiteLongCastle
+					whiteShortCastle = tempWhiteShortCastle
 					if isMate {
 						fmt.Println("failure")
 					}
@@ -125,7 +133,15 @@ func getSpacesCanMove(pieceRow int, pieceFile int, board [8][8]Piece) []Square {
 						spacesCanMove = append(spacesCanMove, Square{i, j})
 					}
 				} else {
+					tempWhiteLongCastle := whiteLongCastle
+					tempWhiteShortCastle := whiteShortCastle
+					tempBlackLongCastle := blackLongCastle
+					tempBlackShortCastle := blackShortCastle
 					board, success, isMate := blackMovement(board, i, j, 'K', "")
+					whiteLongCastle = tempWhiteLongCastle
+					whiteShortCastle = tempWhiteShortCastle
+					blackLongCastle = tempBlackLongCastle
+					blackShortCastle = tempBlackShortCastle
 					if isMate {
 						fmt.Println("failure")
 					}
@@ -353,7 +369,6 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 	success := false
 	prevBoard := board
 	if match, err := regexp.MatchString(`^O-O$`, input); err == nil && match && blackShortCastle {
-		fmt.Println("castling!")
 		if !checkPieceInWay(board, 0, 4, 0, 7) && !blockingCastle(board, Square{0, 4}, Square{0, 7}) {
 			board[0][6] = board[0][4]
 			board[0][4] = emptySquare
@@ -468,6 +483,11 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 				case 'R':
 					if (rowDisamb && i == disambRow) || (fileDisamb && j == disambFile) || (fileDisamb == rowDisamb) {
 						if file-j == 0 || row-i == 0 {
+							if j == 0 {
+								blackLongCastle = false
+							} else if j == 7 {
+								blackShortCastle = false
+							}
 							if checkPieceInWay(board, i, j, row, file) {
 								return board, false, false
 							}
@@ -480,11 +500,6 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 				case 'N':
 					if (rowDisamb && i == disambRow) || (fileDisamb && j == disambFile) || (fileDisamb == rowDisamb) {
 						if (rowDist == 2 && fileDist == 1) || (rowDist == 1 && fileDist == 2) {
-							if j == 0 {
-								whiteLongCastle = false
-							} else if j == 7 {
-								whiteShortCastle = false
-							}
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							success = true
@@ -533,16 +548,16 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 }
 
 func parseDisamb(fileDisamb* bool, rowDisamb* bool, disambRow* int, disambFile* int, input string) {
-	if match, err := regexp.MatchString(`^[a-h]x[a-h][1-8]\n$`, input); err == nil && match {
+	if match, err := regexp.MatchString(`^[a-h]x[a-h][1-8]$`, input); err == nil && match {
 		*disambFile = int(input[0] - 'a')
 		*fileDisamb = true
-	} else if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^[a-hNKQBR][1-8]x?[a-h][1-8]$`, input); err == nil && match {
 		*rowDisamb = true
 		*disambRow = int(input[1] - '0')
-	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]x?[a-h][1-8]\n$`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]x?[a-h][1-8]$`, input); err == nil && match {
 		*disambFile = int(input[1] - 'a')
 		*fileDisamb = true
-	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]\n$`, input); err == nil && match {
+	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h][1-8]x?[a-h][1-8]$`, input); err == nil && match {
 		*rowDisamb = true
 		*fileDisamb = true
 		*disambRow = int(input[1] - '0')
