@@ -35,15 +35,8 @@ func main() {
 			myTurn = 1
 		}	
 		if myTurn == 1 {
-			for {
-				scanner.Scan()
-				if verifyInput(scanner.Text()) {
-					conn.Write([]byte(scanner.Text()))
-					break
-				} else {
-					fmt.Println("\rInvalid input.\n")
-				}
-			}	
+			scanner.Scan()
+			conn.Write([]byte(scanner.Text()))
 		}
 		go readString(inputc, conn, buf)
 		str = <- inputc
@@ -59,20 +52,3 @@ func readString(c chan string, conn net.Conn, buf []byte) {
 	c <- string(buf[:n])
 }
 
-func verifyInput(input string) bool {
-	if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?x[a-h][1-8]$`, input); err == nil && match {
-		return true
-	} else if match, err := regexp.MatchString(`^[a-hNKQBR][a-h]?[1-8]?[a-h][1-8]$`, input); err == nil && match {
-		return true
-	} else if match, err := regexp.MatchString(`^[NKQBR][a-h][1-8]$`, input); err == nil && match {
-		return true
-	} else if match, err := regexp.MatchString(`^[a-h][1-8]$`, input); err == nil && match {
-		return true
-	} else if match, err := regexp.MatchString(`^O-O(-O)?$`, input); err == nil && match {
-		return true
-	} else if match, err := regexp.MatchString(`^[a-h]x[a-h][1-8]$`, input); err == nil && match {
-		return true
-	}else {
-		return false
-	}
-}
