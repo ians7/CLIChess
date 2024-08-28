@@ -6,12 +6,13 @@ import (
 	"bufio"
 	"os"
 	"os/exec"
-	"regexp"
 )
 
 func main() {
+	var address = ""
+	initLandingPage(&address)
 	scanner := bufio.NewScanner(os.Stdin)
-	conn, conErr := net.Dial("tcp", "127.0.0.1:20000")
+	conn, conErr := net.Dial("tcp", address)
 	if conErr != nil {
 		fmt.Println("Failed to connect to the server")
 		return
@@ -42,6 +43,21 @@ func main() {
 		str = <- inputc
 		fmt.Printf("%s", str[1:len(str)])
 	}
+}
+
+func initLandingPage(address *string) {
+	addr := ""
+	port := ""
+	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Println("------ Command Line Chess ------");
+	fmt.Println("Please enter the IP adress and port you wish to connect to.")
+	fmt.Printf("IP Address: ")
+	scanner.Scan()
+	addr += scanner.Text()
+	fmt.Printf("Port: ")
+	scanner.Scan()
+	port += scanner.Text()
+	*address = addr + ":" + port
 }
 
 func readString(c chan string, conn net.Conn, buf []byte) {
