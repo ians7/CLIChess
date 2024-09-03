@@ -13,12 +13,15 @@ var (
 	blackShortCastle = true
 )
 
-func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, bool, bool) {
+func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, bool, bool, bool) {
 	isMate := false
 	row := 0
 	file := 0
 	prevBoard := board
 	pieceType := parsePieceType(input)
+	if len(input) < 2 {
+		return board, false, false, false
+	}
 
 	if pieceType != -1 && pieceType != 'O' {
 		row = int(8 - (input[len(input)-1] - '0'))
@@ -26,35 +29,34 @@ func executeTurn(input string, whiteTurn bool, board [8][8]Piece) ([8][8]Piece, 
 	} 
 
 	if (row > 8 || row < 0 || file > 8 || file < 0) && pieceType != -1 && pieceType != 'O' {
-		return board, false, isMate
+		return board, false, isMate, false
 	}
 
 	if whiteTurn {
-		tempBoard, success, isMate := whiteMovement(board, row, file, pieceType, input)
+		tempBoard, success, isMate, isCheck := whiteMovement(board, row, file, pieceType, input)
 		if isMate {
-			isMate = true
 			fmt.Println("White wins!")
 		}
 		if success {
 			tempBoard = removeBlackEnPassant(tempBoard)
-			return tempBoard, success, isMate
+			return tempBoard, success, isMate, isCheck
 		} else {
-			return prevBoard, success, isMate
+			return prevBoard, success, isMate, isCheck
 		}
 	} else {
-		tempBoard, success, isMate := blackMovement(board, row, file, pieceType, input)
+		tempBoard, success, isMate, isCheck := blackMovement(board, row, file, pieceType, input)
 		if isMate {
-			isMate = true
 			fmt.Println("Black wins!")
-		} else if success {
+		} 
+		if success {
 			tempBoard = removeWhiteEnPassant(tempBoard)
-			return tempBoard, success, isMate
+			return tempBoard, success, isMate, isCheck
 		} else {
-			return prevBoard, success, isMate
+			return prevBoard, success, isMate, isCheck
 		}
 	}
 
-	return board, false, isMate
+	return board, false, isMate, false
 }
 
 func parsePieceType(input string) int {
@@ -68,7 +70,6 @@ func parsePieceType(input string) int {
 		pieceType = 'P'
 	} else if pieceType == 'O' {
 		pieceType = 'O'
-		fmt.Println("pieceType =", pieceType)
 	}
 	return int(pieceType)
 }
@@ -77,6 +78,7 @@ func isMate(kingRow int, kingFile int, pieceRow int, pieceFile int, board [8][8]
 	var spacesBetween []Square = getSpacesBetween(board, kingRow, kingFile, pieceRow, pieceFile)
 	var spacesCanMove []Square
 	if len(getSpacesCanMove(kingRow, kingFile, board)) > 0 {
+		fmt.Println(getSpacesCanMove(kingRow, kingFile, board))
 		return false
 	}
 	for i := 0; i < 8; i++ {
@@ -87,7 +89,7 @@ func isMate(kingRow int, kingFile int, pieceRow int, pieceFile int, board [8][8]
 					for _, squareMove := range spacesCanMove {
 						if squareMove.row == squareBetween.row && squareMove.file == squareBetween.file {
 							return false
-						}	
+						} 
 					}
 				}
 			}
@@ -172,7 +174,7 @@ func detectCheckOnKing(board [8][8]Piece) (bool, Square, Square) {
 						checkingPieceFile = j
 					}
 				} else if currPiece.teamID == 0 && (bkFileDist == 0 || bkRowDist == 0) && !bkCheck {
-					if checkPieceInWay(board, i, j, bkFile, bkFile) {
+					if checkPieceInWay(board, i, j, bkRow, bkFile) {
 						bkCheck = false
 					} else {
 						bkCheck = true
@@ -241,3 +243,4 @@ func removeBlackEnPassant(board [8][8]Piece) [8][8]Piece {
 	}
 	return board
 }
+

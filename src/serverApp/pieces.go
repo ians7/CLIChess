@@ -57,9 +57,9 @@ func getSpacesCanMove(pieceRow int, pieceFile int, board [8][8]Piece) []Square {
 				spacesCanMove = append(spacesCanMove, Square{pieceRow - 2, pieceFile})
 				spacesCanMove = append(spacesCanMove, Square{pieceRow - 1, pieceFile})
 			} else if !checkPieceInWay(board, pieceRow, pieceFile, pieceRow-1, pieceFile) {
-				spacesCanMove = append(spacesCanMove, Square{pieceRow - 1, pieceFile})
+				spacesCanMove = append(spacesCanMove, Square{pieceRow-1, pieceFile})
 			}
-		} else {
+		} else if currPiece.teamID == 1 {
 			if !checkPieceInWay(board, pieceRow, pieceFile, pieceRow+2, pieceFile) && pieceRow == 6 {
 				spacesCanMove = append(spacesCanMove, Square{pieceRow + 2, pieceFile})
 				spacesCanMove = append(spacesCanMove, Square{pieceRow + 1, pieceFile})
@@ -113,40 +113,21 @@ func getSpacesCanMove(pieceRow int, pieceFile int, board [8][8]Piece) []Square {
 		}
 
 	case 'K':
-		for i := 0; i < 8; i++ {
-			for j := 0; j < 8; j++ {
-				if currPiece.teamID == 0 {
-					tempBlackLongCastle := blackLongCastle
-					tempBlackShortCastle := blackShortCastle
-					tempWhiteLongCastle := whiteLongCastle
-					tempWhiteShortCastle := whiteShortCastle
-					board, success, isMate := whiteMovement(board, i, j, 'K', "")
-					blackLongCastle = tempBlackLongCastle
-					blackShortCastle = tempBlackShortCastle
-					whiteLongCastle = tempWhiteLongCastle
-					whiteShortCastle = tempWhiteShortCastle
-					if isMate {
-						fmt.Println("failure")
-					}
-					board[0][0] = emptySquare // do not remove
-					if success {
-						spacesCanMove = append(spacesCanMove, Square{i, j})
-					}
-				} else {
-					tempWhiteLongCastle := whiteLongCastle
-					tempWhiteShortCastle := whiteShortCastle
-					tempBlackLongCastle := blackLongCastle
-					tempBlackShortCastle := blackShortCastle
-					board, success, isMate := blackMovement(board, i, j, 'K', "")
-					whiteLongCastle = tempWhiteLongCastle
-					whiteShortCastle = tempWhiteShortCastle
-					blackLongCastle = tempBlackLongCastle
-					blackShortCastle = tempBlackShortCastle
-					if isMate {
-						fmt.Println("failure")
-					}
-					board[0][0] = emptySquare // do not remove
-					if success {
+		i := pieceRow-1
+		j := pieceFile-1
+		if pieceRow == 0 {
+			i = pieceRow
+		}
+		if pieceFile == 0 {
+			j = pieceFile
+		}
+		for ; i <= pieceRow+1 && i < 8 ; i++ {
+			for ; j <= pieceFile+1 && j < 8 ; j++ {
+				if board[i][j].pieceID == 0 {
+					spacesCanMove = append(spacesCanMove, Square{i, j})
+				} else if board[i][j].teamID != currPiece.teamID {
+					squareIsAvailable := !checkIfSquareDefended(board, board[i][j].pieceID, i, j)
+					if squareIsAvailable {
 						spacesCanMove = append(spacesCanMove, Square{i, j})
 					}
 				}
@@ -167,7 +148,7 @@ func getSpacesBetween(board [8][8]Piece, kingRow int, kingFile int, pieceRow int
 	}
 	if kingFile > pieceFile {
 		fileIterator = -1
-	} else if kingFile == pieceRow {
+	} else if kingFile == pieceFile {
 		fileIterator = 0
 	}
 
@@ -182,7 +163,7 @@ func getSpacesBetween(board [8][8]Piece, kingRow int, kingFile int, pieceRow int
 	return spacesBetween
 }
 
-func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input string) ([8][8]Piece, bool, bool) {
+func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input string) ([8][8]Piece, bool, bool, bool) {
 	prevBoard := board
 	success := false
 	if match, err := regexp.MatchString(`^O-O$`, input); err == nil && match && whiteShortCastle {
@@ -207,7 +188,7 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 		}
 	}
 	if board[row][file].teamID == 0 {
-		return board, false, false
+		return board, false, false, false
 	}
 	for i := 0; i < 8; i++ {
 		for j := 0; j < 8; j++ {
@@ -271,12 +252,12 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 						}
 						success = true
 					} else if !fileDisamb && file == j && (i-row > 2 || i-row < 1) {
-						return board, false, false
+						return board, false, false, false
 					}
 
 				case 'K':
 					if checkPieceInWay(board, i, j, row, file) || rowDist > 1 || fileDist > 1 {
-						return board, false, false
+						return board, false, false, false
 					}
 
 					if (rowDist == fileDist || file-j == 0 || row-i == 0) && board[row][file].teamID != 0 {
@@ -291,12 +272,12 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 					if (rowDisamb && i == disambRow) || (fileDisamb && j == disambFile) || (!fileDisamb && !rowDisamb) {
 						if rowDist == fileDist || file-j == 0 || row-i == 0 {
 							if checkPieceInWay(board, i, j, row, file) {
-								return board, false, false
+								return board, false, false, false
 							}
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
 							success = true
-						}
+						} 						
 					}
 
 				case 'R':
@@ -308,7 +289,7 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 								whiteShortCastle = false
 							}
 							if checkPieceInWay(board, i, j, row, file) {
-								return board, false, false
+								return board, false, false, false
 							}
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
@@ -328,7 +309,7 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 					if (rowDisamb && i == disambRow) || (fileDisamb && j == disambFile) || (fileDisamb == rowDisamb) {
 						if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
 							if checkPieceInWay(board, i, j, row, file) {
-								return board, false, false
+								return board, false, false, false
 							}
 
 							if rowDist == fileDist {
@@ -349,23 +330,23 @@ func whiteMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 		}		
 	}
 	if !success {
-		return board, false, false
+		return board, false, false, false
 	}
 	isCheck, kingSquare, pieceSquare := detectCheckOnKing(board)
 	if isCheck {
 		if board[kingSquare.row][kingSquare.file].teamID == 0 {
-			return prevBoard, false, false
+			return prevBoard, false, false, isCheck
 		} else {
 			if isMate := isMate(kingSquare.row, kingSquare.file, pieceSquare.row, pieceSquare.file, board); isMate {
-				return board, true, true
+				return board, true, true, isCheck
 			}
-			return board, true, false
+			return board, true, false, isCheck
 		}
 	}
-	return board, true, false
+	return board, true, false, isCheck
 }
 
-func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input string) ([8][8]Piece, bool, bool) {
+func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input string) ([8][8]Piece, bool, bool, bool) {
 	success := false
 	prevBoard := board
 	if match, err := regexp.MatchString(`^O-O$`, input); err == nil && match && blackShortCastle {
@@ -390,7 +371,7 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 		}
 	}
 	if !success && board[row][file].teamID == 1 {
-		return board, false, false
+		return board, false, false, false
 	}
 	for i := 0; i < 8; i++ {
 		for j := 0; j < 8; j++ {
@@ -453,12 +434,12 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 						}
 						success = true
 					} else if !fileDisamb && file == j && (row - i > 2 || row - i < 1) {
-						return board, false, false
+						return board, false, false, false
 					}
 	
 				case 'K':
 					if checkPieceInWay(board, i, j, row, file) || rowDist > 1 || fileDist > 1 {
-						return board, false, false
+						return board, false, false, false
 					}
 					if (rowDist == fileDist || file-j == 0 || row-i == 0) && board[row][file].teamID != 1 {
 						board[row][file] = board[i][j]
@@ -472,7 +453,7 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 					if (rowDisamb && i == disambRow) || (fileDisamb && j == disambFile) || (fileDisamb == rowDisamb) {
 						if rowDist == fileDist || file-j == 0 || row-i == 0 {
 							if checkPieceInWay(board, i, j, row, file) {
-								return board, false, false
+								return board, false, false, false
 							}
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
@@ -489,7 +470,7 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 								blackShortCastle = false
 							}
 							if checkPieceInWay(board, i, j, row, file) {
-								return board, false, false
+								return board, false, false, false
 							}
 							board[row][file] = board[i][j]
 							board[i][j] = emptySquare
@@ -510,7 +491,7 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 					if (rowDisamb && i == disambRow) || (fileDisamb && j == disambFile) || (fileDisamb == rowDisamb) {
 						if (i%2 == j%2 && row%2 == file%2) || (i%2 != j%2 && row%2 != file%2) {
 							if checkPieceInWay(board, i, j, row, file) {
-								return board, false, false
+								return board, false, false, false
 							}
 
 							if rowDist == fileDist {
@@ -531,20 +512,20 @@ func blackMovement(board [8][8]Piece, row int, file int, pieceType int, input st
 		}
 	}
 	if !success {
-		return board, false, false
+		return board, false, false, false
 	}
 	isCheck, kingSquare, pieceSquare := detectCheckOnKing(board)
 	if isCheck {
 		if board[kingSquare.row][kingSquare.file].teamID == 1 {
-			return prevBoard, false, false
+			return prevBoard, false, false, isCheck
 		} else {
 			if isMate := isMate(kingSquare.row, kingSquare.file, pieceSquare.row, pieceSquare.file, board); isMate {
-				return board, true, true
+				return board, true, true, isCheck
 			}
-			return board, true, false
+			return board, true, false, isCheck
 		}
 	}
-	return board, true, false
+	return board, true, false, isCheck
 }
 
 func parseDisamb(fileDisamb* bool, rowDisamb* bool, disambRow* int, disambFile* int, input string) {
@@ -577,6 +558,22 @@ func blockingCastle(board [8][8]Piece, kingSquare Square, rookSquare Square) boo
 							return true
 						}	
 					}
+				}
+			}
+		}
+	}
+	return false
+}
+func checkIfSquareDefended(board [8][8]Piece, teamThatWantsToMove int, row int, file int) bool {
+	var spacesCanMove []Square
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 8; j++ {
+			if board[i][j].pieceID != 'K' && board[i][j].teamID != teamThatWantsToMove {
+				spacesCanMove = getSpacesCanMove(i, j, board)
+			}
+			for _, square := range spacesCanMove {
+				if square.row == row && square.file == file {
+					return true
 				}
 			}
 		}

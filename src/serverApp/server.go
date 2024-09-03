@@ -44,8 +44,10 @@ func createGame() Game {
 func gameLoop(whiteConn net.Conn, blackConn net.Conn, game Game) error {
 	isMate := false
 	success := false
+	isCheck := false
 	whiteMsg := "White turn: "
 	blackMsg := "Black turn: " 
+	gameFile := newGameFile()
 	whiteBoard := createWhiteBoardMsg(game.board)
 	blackBoard := createBlackBoardMsg(game.board)
 	whiteConn.Write([]byte("1" + whiteBoard + whiteMsg))
@@ -56,10 +58,11 @@ func gameLoop(whiteConn net.Conn, blackConn net.Conn, game Game) error {
 		if err != nil {
 			return fmt.Errorf("Error reading user input")
 		}
-		game.board, success, isMate = executeTurn(input, game.turn, game.board)
+		game.board, success, isMate, isCheck = executeTurn(input, game.turn, game.board)
 		if success {
 			whiteBoard := createWhiteBoardMsg(game.board)
 			blackBoard := createBlackBoardMsg(game.board)
+			writeToFile(&gameFile, game.turn, input, isCheck, isMate)
 			game.turn = !game.turn
 			if isMate {
 				handleMate(game, whiteConn, blackConn)
@@ -105,17 +108,17 @@ func handleMate(game Game, whiteConn net.Conn, blackConn net.Conn) {
 	whiteBoard := createWhiteBoardMsg(game.board)
 	blackBoard := createBlackBoardMsg(game.board)
 	if !game.turn {
-		blackConn.Write([]byte(whiteBoard + "Black wins!\n"))
-		whiteConn.Write([]byte(blackBoard + "Black wins!\n"))
+		blackConn.Write([]byte(whiteBoard + "White wins!\n"))
+		whiteConn.Write([]byte(blackBoard + "White wins!\n"))
 	} else {
-		whiteConn.Write([]byte(whiteBoard + "White wins!\n"))
-		blackConn.Write([]byte(blackBoard + "White wins!\n"))
+		whiteConn.Write([]byte(whiteBoard + "Black wins!\n"))
+		blackConn.Write([]byte(blackBoard + "Black wins!\n"))
 	}
 }
 
 func createWhiteBoardMsg(board [8][8]Piece) string {
 	msg := ""
-	msg = msg + W + "  a   b   c   d   e   f   g   h\n"
+	msg = msg + "  a   b   c   d   e   f   g   h\n"
 	msg = msg + Br + " -------------------------------\n"
 	bgColor := bgRed
 	colorBool := true
@@ -143,9 +146,10 @@ func createWhiteBoardMsg(board [8][8]Piece) string {
 	}
 	return msg
 }
+
 func createBlackBoardMsg(board [8][8]Piece) string {
 	msg := ""
-	msg = msg + W + "  h   g   f   e   d   c   b   a\n"
+	msg = msg + "  h   g   f   e   d   c   b   a\n"
 	msg = msg + Br + " -------------------------------\n"
 	bgColor := bgRed
 	colorBool := true

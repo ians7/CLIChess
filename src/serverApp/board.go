@@ -43,7 +43,6 @@ func checkPieceInWay(board [8][8]Piece, pieceRow int, pieceFile int, destRow int
 	} else if pieceFile == destFile {
 		fileIterator = 0
 	}
-
 	k, l := pieceRow, pieceFile
 	k += rowIterator
 	l += fileIterator
